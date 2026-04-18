@@ -91,7 +91,7 @@ function ResultsPage() {
         </div>
       </div>
 
-      <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 space-y-8">
+      <div className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-8">
 
         {/* First-load spinner — only when no data yet */}
         {isFirstLoad && (

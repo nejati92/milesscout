@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useCallback, Fragment } from 'react'
 import type { AvailabilityResult, Recommendation } from '../../shared/types'
 import { getBookingUrl } from '../utils/bookingLinks'
 import { trpc } from '../trpc'
@@ -353,7 +353,7 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
   return (
     <div className="flex flex-col gap-3">
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         {programs.map((p) => {
           const label = enriched.find((r) => r.source === p)?.programName ?? p
           const active = filters.program === p
@@ -423,7 +423,69 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
 
       {/* Table */}
       <div className="bg-white/[0.03] border border-white/8 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
+
+        {/* Mobile card list */}
+        <div className="sm:hidden divide-y divide-white/5">
+          {paginated.length === 0 ? (
+            <div className="px-4 py-12 text-center text-white/20 text-sm">No results match the current filters.</div>
+          ) : paginated.map((r) => {
+            const rec = r.recommendation
+            const isExpanded = filters.expanded === r.id
+            const isHighlighted = filters.highlighted.includes(r.id)
+            return (
+              <Fragment key={r.id}>
+                <div
+                  onClick={() => update({ expanded: isExpanded ? null : r.id })}
+                  className={`px-4 py-3.5 cursor-pointer transition-colors ${isExpanded ? 'bg-white/[0.04]' : isHighlighted ? 'bg-indigo-500/5' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {rec ? (
+                        <div className={`w-2 h-2 rounded-full shrink-0 mt-1 ${VERDICT_DOT[rec.verdict]}`} style={{ boxShadow: VERDICT_GLOW[rec.verdict] }} />
+                      ) : recommendations === undefined ? (
+                        <div className="w-2 h-2 rounded-full bg-white/20 animate-pulse shrink-0 mt-1" />
+                      ) : (
+                        <div className="w-2 h-2 rounded-full bg-white/10 shrink-0 mt-1" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-white/80 truncate">{r.programName}</div>
+                        {rec && <div className={`text-xs ${VERDICT_TEXT[rec.verdict]}`}>{VERDICT_LABEL[rec.verdict]}</div>}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-base font-bold text-white tabular-nums">{r.pointsCost.toLocaleString()} <span className="text-xs font-normal text-white/30">pts</span></div>
+                      {r.taxesCashGbp != null && <div className="text-xs text-white/40">+£{r.taxesCashGbp} taxes</div>}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-mono font-bold text-white">{r.originAirport} <span className="text-white/25">→</span> {r.destinationAirport}</span>
+                    <span className="text-white/20 text-xs">{isExpanded ? '▲' : '▼'}</span>
+                  </div>
+                  <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-1">
+                    <span className="text-xs text-white/30">{r.date}</span>
+                    <span className="text-white/15">·</span>
+                    <span className="text-xs text-white/25 capitalize">{r.cabin}</span>
+                    <span className="text-white/15">·</span>
+                    <span className={`text-xs font-medium ${r.stops === 0 ? 'text-emerald-400/70' : 'text-amber-400/70'}`}>
+                      {r.stops === 0 ? 'Direct' : `${r.stops}+ stop`}
+                    </span>
+                    {r.remainingSeats != null && r.remainingSeats <= 2 && (
+                      <span className="text-xs text-amber-400 ml-auto">{r.remainingSeats} left</span>
+                    )}
+                  </div>
+                </div>
+                {isExpanded && (
+                  <div className="bg-white/[0.03] border-t border-white/5 px-4 py-4">
+                    <ExpandedRow result={r} rec={rec} />
+                  </div>
+                )}
+              </Fragment>
+            )
+          })}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full border-collapse">
             <colgroup>
               <col className="w-8" />
