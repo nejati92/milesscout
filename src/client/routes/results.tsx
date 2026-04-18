@@ -175,6 +175,14 @@ function ResultsPage() {
               </div>
             )}
 
+            {/* Strategic advice — shown above table, hidden until data arrives */}
+            {searchData.rawResults.length > 0 && reasonData?.advice && (
+              <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
+                <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-3">Strategic Advice</p>
+                <p className="text-sm text-white/50 leading-relaxed">{reasonData.advice}</p>
+              </div>
+            )}
+
             {/* Results table */}
             {searchData.rawResults.length > 0 && (
               <ResultsTable
@@ -183,19 +191,6 @@ function ResultsPage() {
                 filters={tableFilters}
                 onFiltersChange={setTableFilters}
               />
-            )}
-
-            {/* Strategic advice */}
-            {reasonData?.advice && searchData.rawResults.length > 0 && (
-              <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
-                <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-3">Strategic Advice</p>
-                <p className="text-sm text-white/50 leading-relaxed">{reasonData.advice}</p>
-              </div>
-            )}
-            {isReasoning && searchData.rawResults.length > 0 && (
-              <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
-                <p className="text-xs font-semibold text-white/20 uppercase tracking-wider animate-pulse">Analysing results…</p>
-              </div>
             )}
           </>
         )}

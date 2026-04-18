@@ -5,11 +5,29 @@
 }
 
 @layer base {
+  :root {
+    --app-bg: #08080f;
+    --app-bg-80: rgb(8 8 15 / 0.8);
+    --app-tooltip: #1a1a2e;
+  }
+
+  html.light {
+    --app-bg: #f2f2f7;
+    --app-bg-80: rgb(242 242 247 / 0.88);
+    --app-tooltip: #e2e2ea;
+    /* Flip white↔near-black so all text-white/X, bg-white/X, border-white/X adapt */
+    --color-white: oklch(0.12 0.01 270);
+    --color-black: oklch(0.97 0 0);
+    color-scheme: light;
+  }
+
   * { box-sizing: border-box; }
 
   body {
-    @apply bg-[#08080f] text-white antialiased;
+    background-color: var(--app-bg);
+    @apply text-white antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    transition: background-color 0.2s ease;
   }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }

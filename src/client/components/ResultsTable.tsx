@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import type { AvailabilityResult, Recommendation } from '../../shared/types'
 import { getBookingUrl } from '../utils/bookingLinks'
 import { trpc } from '../trpc'
@@ -74,60 +74,162 @@ function fmtDuration(mins: number) {
   return `${Math.floor(mins / 60)}h ${mins % 60}m`
 }
 
-function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<typeof result['recommendation']> }) {
-  const { data, isLoading } = trpc.search.tripDetails.useQuery({ id: result.id, cabin: result.cabin, source: result.source }, { staleTime: 10 * 60 * 1000 })
+const TRIP_PAGE = 5
 
-  const trips = data?.trips ?? []
+function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<typeof result['recommendation']> }) {
+  const { data, isLoading } = trpc.search.tripDetails.useQuery(
+    { id: result.id, cabin: result.cabin, source: result.source },
+    { staleTime: 10 * 60 * 1000 }
+  )
+
+  const [sortBy, setSortBy] = useState<'duration' | 'departs' | 'seats'>('duration')
+  const [directOnly, setDirectOnly] = useState(false)
+  const [tripPage, setTripPage] = useState(0)
+
+  useEffect(() => { setTripPage(0) }, [sortBy, directOnly])
+
+  const allTrips = data?.trips ?? []
+  const hasDirectTrips = allTrips.some((t) => t.Stops === 0)
+
+  const filtered = useMemo(() => {
+    let t = directOnly ? allTrips.filter((x) => x.Stops === 0) : allTrips
+    if (sortBy === 'duration') t = [...t].sort((a, b) => a.TotalDuration - b.TotalDuration)
+    else if (sortBy === 'departs') t = [...t].sort((a, b) => a.DepartsAt.localeCompare(b.DepartsAt))
+    else t = [...t].sort((a, b) => b.RemainingSeats - a.RemainingSeats)
+    return t
+  }, [allTrips, sortBy, directOnly])
+
+  const totalTripPages = Math.ceil(filtered.length / TRIP_PAGE)
+  const clampedPage = Math.min(tripPage, Math.max(0, totalTripPages - 1))
+  const visible = filtered.slice(clampedPage * TRIP_PAGE, (clampedPage + 1) * TRIP_PAGE)
 
   return (
-    <div className="space-y-4">
-      {/* Flight segments */}
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-xs text-white/25 animate-pulse">
-          <span className="w-3 h-3 rounded-full border border-white/20 animate-spin border-t-transparent" />
-          Loading flight details…
+    <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
+
+      {/* Booking links — top */}
+      {!isLoading && (data?.relevant || data?.others?.length) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {data.relevant && (
+            <a href={data.relevant.link} target="_blank" rel="noopener noreferrer"
+              className="text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition no-underline">
+              {data.relevant.label} →
+            </a>
+          )}
+          {data.others?.map((b, i) => (
+            <a key={i} href={b.link} target="_blank" rel="noopener noreferrer"
+              className="text-xs text-white/40 hover:text-white/70 bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg transition no-underline border border-white/8">
+              {b.label}
+            </a>
+          ))}
         </div>
-      ) : trips.length > 0 ? (
+      )}
+
+      {/* AI analysis */}
+      {rec && (
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="flex-1 min-w-0 space-y-1">
+            <p className="text-sm font-semibold text-white/80">{rec.headline}</p>
+            <p className="text-xs text-white/45 leading-relaxed">{rec.explanation}</p>
+          </div>
+          <div className="flex flex-wrap gap-1.5 shrink-0">
+            {rec.flags.map((flag, i) => (
+              <div key={i} className={`flex gap-1 text-xs px-2.5 py-1 rounded-lg border ${FLAG_STYLE[flag.type] ?? 'bg-white/5 text-white/40 border-white/10'}`}>
+                <span className="font-bold shrink-0">{FLAG_ICON[flag.type] ?? '•'}</span>
+                <span>{flag.message}</span>
+              </div>
+            ))}
+            {rec.cppGbp != null && (
+              <span className="text-xs text-white/25 self-end">
+                {(rec.cppGbp * 100).toFixed(1)}p/pt{rec.estimatedCashValueGbp != null && ` · ≈ £${rec.estimatedCashValueGbp.toLocaleString()}`}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Flight options */}
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-xs text-white/25 animate-pulse py-2">
+          <span className="w-3 h-3 rounded-full border border-white/20 animate-spin border-t-transparent inline-block" />
+          Loading flights…
+        </div>
+      ) : allTrips.length > 0 ? (
         <div className="space-y-3">
-          {trips.map((trip, ti) => {
-            const segments = Array.isArray(trip?.AvailabilitySegments) ? trip.AvailabilitySegments : []
+          {/* Filter bar */}
+          <div className="flex flex-wrap items-center gap-2 pb-1 border-b border-white/5">
+            <span className="text-xs text-white/25">{filtered.length} option{filtered.length !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-1 ml-1">
+              {(['duration', 'departs', 'seats'] as const).map((s) => (
+                <button key={s} onClick={() => setSortBy(s)}
+                  className={`text-xs px-2.5 py-1 rounded-md transition cursor-pointer ${sortBy === s ? 'bg-white/10 text-white/70' : 'text-white/25 hover:text-white/50'}`}>
+                  {s === 'duration' ? 'Shortest' : s === 'departs' ? 'Earliest' : 'Most seats'}
+                </button>
+              ))}
+            </div>
+            {hasDirectTrips && (
+              <button onClick={() => setDirectOnly(!directOnly)}
+                className={`text-xs px-2.5 py-1 rounded-md transition cursor-pointer ml-auto ${directOnly ? 'bg-emerald-500/20 text-emerald-300' : 'text-white/25 hover:text-white/50'}`}>
+                Direct only
+              </button>
+            )}
+          </div>
+
+          {visible.length === 0 ? (
+            <p className="text-xs text-white/20 py-2">No matching options</p>
+          ) : visible.map((trip) => {
+            const segs = Array.isArray(trip.AvailabilitySegments) ? trip.AvailabilitySegments : []
             return (
-              <div key={trip?.ID ?? ti} className="space-y-1.5">
-                {trips.length > 1 && (
-                  <p className="text-xs text-white/25 font-medium uppercase tracking-wider">Option {ti + 1}</p>
-                )}
-                <div className="flex flex-col gap-1">
-                  {segments.map((seg, si) => {
-                    const prev = si > 0 ? segments[si - 1] : null
+              <div key={trip.ID} className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+                {/* Trip header */}
+                <div className="flex items-center gap-4 px-4 py-2.5 border-b border-white/5">
+                  <div>
+                    <span className="text-base font-mono font-bold text-white">{fmtTime(trip.DepartsAt)}</span>
+                    <span className="text-white/20 mx-1.5">→</span>
+                    <span className="text-base font-mono font-bold text-white">{fmtTime(trip.ArrivesAt)}</span>
+                  </div>
+                  <span className="text-xs text-white/30">{fmtDuration(trip.TotalDuration)}</span>
+                  <span className={`text-xs font-medium ml-auto ${trip.Stops === 0 ? 'text-emerald-400/70' : 'text-white/30'}`}>
+                    {trip.Stops === 0 ? 'Direct' : `${trip.Stops} stop`}
+                  </span>
+                  {trip.RemainingSeats > 0 && trip.RemainingSeats <= 4 && (
+                    <span className="text-xs text-amber-400/80">{trip.RemainingSeats} left</span>
+                  )}
+                </div>
+
+                {/* Segments */}
+                <div className="divide-y divide-white/5">
+                  {segs.map((seg, si) => {
+                    const prev = si > 0 ? segs[si - 1] : null
                     const layoverMins = prev
                       ? Math.round((new Date(seg.DepartsAt).getTime() - new Date(prev.ArrivesAt).getTime()) / 60000)
                       : 0
                     return (
-                      <div key={si}>
+                      <div key={seg.ID ?? si}>
                         {si > 0 && layoverMins > 0 && (
-                          <div className="flex items-center gap-2 py-1 pl-2">
-                            <div className="w-px h-4 bg-white/10" />
-                            <span className="text-xs text-white/25">Layover {seg.DestinationAirport} · {fmtDuration(layoverMins)}</span>
+                          <div className="flex items-center gap-2 px-4 py-1.5 bg-white/[0.01]">
+                            <span className="text-xs text-amber-400/50">⏱ Layover in {prev!.DestinationAirport} — {fmtDuration(layoverMins)}</span>
                           </div>
                         )}
-                        <div className="flex items-center gap-3 bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3">
-                          <span className="text-xs font-mono font-bold text-indigo-300 w-16 shrink-0">{seg.FlightNumber}</span>
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <div className="text-right shrink-0">
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <span className="text-xs font-mono font-bold text-indigo-300/80 w-14 shrink-0">{seg.FlightNumber}</span>
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                            <div className="shrink-0 text-center w-12">
                               <div className="text-sm font-mono font-bold text-white">{seg.OriginAirport}</div>
-                              <div className="text-xs text-white/30">{fmtTime(seg.DepartsAt)}</div>
+                              <div className="text-[11px] text-white/35">{fmtTime(seg.DepartsAt)}</div>
                             </div>
-                            <span className="flex-1 border-t border-dashed border-white/10 mx-2" />
-                            {seg.Duration > 0 && <span className="text-xs text-white/25 shrink-0">{fmtDuration(seg.Duration)}</span>}
-                            <span className="flex-1 border-t border-dashed border-white/10 mx-2" />
-                            <div className="text-left shrink-0">
+                            <div className="flex-1 flex flex-col items-center gap-0.5 min-w-0 px-1">
+                              <span className="text-[10px] text-white/20">{fmtDuration(seg.Duration)}</span>
+                              <div className="w-full border-t border-white/10" />
+                            </div>
+                            <div className="shrink-0 text-center w-12">
                               <div className="text-sm font-mono font-bold text-white">{seg.DestinationAirport}</div>
-                              <div className="text-xs text-white/30">{fmtTime(seg.ArrivesAt)}</div>
+                              <div className="text-[11px] text-white/35">{fmtTime(seg.ArrivesAt)}</div>
                             </div>
                           </div>
                           {seg.AircraftName && (
-                            <span className="text-xs text-white/20 shrink-0 hidden sm:block">{seg.AircraftName}</span>
+                            <span className="text-[11px] text-white/20 shrink-0 hidden md:block truncate max-w-[120px]">{seg.AircraftName}</span>
                           )}
+                          <span className="text-[10px] text-white/20 shrink-0 uppercase">{seg.Cabin}</span>
                         </div>
                       </div>
                     )
@@ -136,51 +238,27 @@ function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<
               </div>
             )
           })}
+
+          {totalTripPages > 1 && (
+            <div className="flex items-center justify-between pt-1">
+              <button
+                onClick={() => setTripPage((p) => Math.max(0, p - 1))}
+                disabled={clampedPage === 0}
+                className="text-xs text-white/30 hover:text-white/60 disabled:text-white/10 disabled:cursor-not-allowed transition cursor-pointer px-2 py-1">
+                ← Prev
+              </button>
+              <span className="text-xs text-white/20">{clampedPage + 1} / {totalTripPages}</span>
+              <button
+                onClick={() => setTripPage((p) => Math.min(totalTripPages - 1, p + 1))}
+                disabled={clampedPage === totalTripPages - 1}
+                className="text-xs text-white/30 hover:text-white/60 disabled:text-white/10 disabled:cursor-not-allowed transition cursor-pointer px-2 py-1">
+                Next →
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-xs text-white/20">No flight details available</p>
-      )}
-
-      {/* AI analysis */}
-      {rec && (
-        <div className="space-y-2 pt-1 border-t border-white/5">
-          <p className="text-sm font-semibold text-white/80">{rec.headline}</p>
-          <p className="text-sm text-white/50 leading-relaxed">{rec.explanation}</p>
-          {rec.flags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {rec.flags.map((flag, i) => (
-                <div key={i} className={`flex gap-1.5 text-xs px-3 py-1.5 rounded-lg border ${FLAG_STYLE[flag.type] ?? 'bg-white/5 text-white/40 border-white/10'}`}>
-                  <span className="font-bold shrink-0">{FLAG_ICON[flag.type] ?? '•'}</span>
-                  <span>{flag.message}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {rec.cppGbp != null && (
-            <span className="text-xs text-white/25">
-              {(rec.cppGbp * 100).toFixed(1)}p/pt
-              {rec.estimatedCashValueGbp != null && <span className="ml-2">≈ £{rec.estimatedCashValueGbp.toLocaleString()} cash</span>}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Booking links */}
-      {!isLoading && (data?.relevant || data?.others?.length) && (
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/5">
-          {data.relevant && (
-            <a href={data.relevant.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-              className="text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition no-underline">
-              {data.relevant.label} →
-            </a>
-          )}
-          {data.others?.map((b, i) => (
-            <a key={i} href={b.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-              className="text-xs text-white/40 hover:text-white/70 bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg transition no-underline border border-white/8">
-              {b.label}
-            </a>
-          ))}
-        </div>
       )}
     </div>
   )
@@ -298,7 +376,7 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
                   {a}
                 </button>
                 {AIRLINE_NAMES[a] && (
-                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs bg-[#1a1a2e] border border-white/10 text-white/80 rounded-lg whitespace-nowrap opacity-0 group-hover/chip:opacity-100 transition-opacity duration-150 z-20 shadow-lg">
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs bg-[var(--app-tooltip)] border border-white/10 text-white/80 rounded-lg whitespace-nowrap opacity-0 group-hover/chip:opacity-100 transition-opacity duration-150 z-20 shadow-lg">
                     {AIRLINE_NAMES[a]}
                   </span>
                 )}
@@ -445,7 +523,7 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
                             <span key={a} className="relative group/airline">
                               <span className="text-xs font-mono font-bold bg-white/8 text-white/50 px-1.5 py-0.5 rounded cursor-default">{a}</span>
                               {AIRLINE_NAMES[a] && (
-                                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs bg-[#1a1a2e] border border-white/10 text-white/80 rounded-lg whitespace-nowrap opacity-0 group-hover/airline:opacity-100 transition-opacity duration-150 z-20 shadow-lg">
+                                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs bg-[var(--app-tooltip)] border border-white/10 text-white/80 rounded-lg whitespace-nowrap opacity-0 group-hover/airline:opacity-100 transition-opacity duration-150 z-20 shadow-lg">
                                   {AIRLINE_NAMES[a]}
                                 </span>
                               )}
