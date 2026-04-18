@@ -75,7 +75,7 @@ function fmtDuration(mins: number) {
 }
 
 function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<typeof result['recommendation']> }) {
-  const { data, isLoading } = trpc.search.tripDetails.useQuery({ id: result.id, cabin: result.cabin }, { staleTime: 10 * 60 * 1000 })
+  const { data, isLoading } = trpc.search.tripDetails.useQuery({ id: result.id, cabin: result.cabin, source: result.source }, { staleTime: 10 * 60 * 1000 })
 
   const trips = data?.trips ?? []
 
@@ -93,17 +93,9 @@ function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<
             const segments = Array.isArray(trip?.AvailabilitySegments) ? trip.AvailabilitySegments : []
             return (
               <div key={trip?.ID ?? ti} className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  {trips.length > 1 && (
-                    <p className="text-xs text-white/25 font-medium uppercase tracking-wider">Option {ti + 1}</p>
-                  )}
-                  {trip.BookingLink && (
-                    <a href={trip.BookingLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-                      className="ml-auto text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition no-underline">
-                      Book via {result.programName} →
-                    </a>
-                  )}
-                </div>
+                {trips.length > 1 && (
+                  <p className="text-xs text-white/25 font-medium uppercase tracking-wider">Option {ti + 1}</p>
+                )}
                 <div className="flex flex-col gap-1">
                   {segments.map((seg, si) => {
                     const prev = si > 0 ? segments[si - 1] : null
@@ -173,18 +165,23 @@ function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<
         </div>
       )}
 
-      {/* Fallback book button when no trips returned booking links */}
-      {!isLoading && trips.every((t) => !t.BookingLink) && (() => {
-        const url = getBookingUrl(result.source)
-        return url ? (
-          <div className="flex justify-end pt-1">
-            <a href={url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-              className="text-xs font-semibold bg-white/10 hover:bg-white/15 text-white/70 px-4 py-2 rounded-lg transition no-underline">
-              Book via {result.programName} →
+      {/* Booking links */}
+      {!isLoading && (data?.relevant || data?.others?.length) && (
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/5">
+          {data.relevant && (
+            <a href={data.relevant.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+              className="text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition no-underline">
+              {data.relevant.label} →
             </a>
-          </div>
-        ) : null
-      })()}
+          )}
+          {data.others?.map((b, i) => (
+            <a key={i} href={b.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+              className="text-xs text-white/40 hover:text-white/70 bg-white/5 hover:bg-white/10 px-3 py-2 rounded-lg transition no-underline border border-white/8">
+              {b.label}
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

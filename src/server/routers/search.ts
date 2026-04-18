@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { router, publicProcedure } from '../trpc.js'
 import { RawQuery, SearchResponse, ReasonResponse, ParsedQuery, Recommendation, AvailabilityResult } from '../../shared/types.js'
 import { parseQuery } from '../services/llm/parseQuery.js'
-import { searchAvailability, fetchTripDetails } from '../services/seatsAero.js'
+import { searchAvailability, fetchTripDetails, type BookingLink } from '../services/seatsAero.js'
 import { reasonResults } from '../services/llm/reasonResults.js'
 import { askAdvisor } from '../services/llm/askAdvisor.js'
 import { PROGRAMS } from '../data/programs.js'
@@ -104,13 +104,22 @@ export const searchRouter = router({
     }),
 
   tripDetails: publicProcedure
-    .input(z.object({ id: z.string(), cabin: z.string() }))
+    .input(z.object({ id: z.string(), cabin: z.string(), source: z.string() }))
     .query(async ({ input }) => {
-      const all = await fetchTripDetails(input.id)
-      // cabin values: "economy","premium_economy","business","first" vs API "economy","premium","business","first"
+      const { trips: all, bookingLinks } = await fetchTripDetails(input.id)
       const cabinNorm = (c: string) => c.replace('premium_economy', 'premium').toLowerCase()
       const trips = all.filter((t) => cabinNorm(t.Cabin ?? '') === cabinNorm(input.cabin))
-      return { trips: trips.length ? trips : all }
+
+      // Pick the most relevant booking link: match by source program label, then primary, then first
+      const sourceLower = input.source.toLowerCase()
+      const relevant = bookingLinks.find((b) => b.label.toLowerCase().includes(sourceLower))
+        ?? bookingLinks.find((b) => b.primary)
+        ?? bookingLinks[0]
+        ?? null
+
+      const others = bookingLinks.filter((b) => b !== relevant)
+
+      return { trips: trips.length ? trips : all, relevant, others }
     }),
 
   programs: publicProcedure

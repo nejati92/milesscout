@@ -197,15 +197,25 @@ export interface Trip {
   RemainingSeats: number
   Source: string
   Cabin: string
-  BookingLink?: string
 }
 
-export async function fetchTripDetails(availabilityId: string): Promise<Trip[]> {
+export interface BookingLink {
+  label: string
+  link: string
+  primary: boolean
+}
+
+export interface TripDetailsResult {
+  trips: Trip[]
+  bookingLinks: BookingLink[]
+}
+
+export async function fetchTripDetails(availabilityId: string): Promise<TripDetailsResult> {
   const apiKey = process.env.SEATS_AERO_API_KEY ?? ''
-  if (!apiKey) return []
+  if (!apiKey) return { trips: [], bookingLinks: [] }
 
   const cacheKey = makeCacheKey({ tripId: availabilityId })
-  const cached = cacheGet<Trip[]>(cacheKey)
+  const cached = cacheGet<TripDetailsResult>(cacheKey)
   if (cached) return cached
 
   try {
@@ -214,15 +224,18 @@ export async function fetchTripDetails(availabilityId: string): Promise<Trip[]> 
     })
     if (!response.ok) {
       console.warn(`[seatsAero] trips ${response.status} for ${availabilityId}`)
-      return []
+      return { trips: [], bookingLinks: [] }
     }
-    const json = await response.json() as { data: Trip[] }
-    const trips = json.data ?? []
-    cacheSet(cacheKey, trips, CACHE_TTL_MS)
-    return trips
+    const json = await response.json() as { data: Trip[]; booking_links?: BookingLink[] }
+    const result: TripDetailsResult = {
+      trips: json.data ?? [],
+      bookingLinks: json.booking_links ?? [],
+    }
+    cacheSet(cacheKey, result, CACHE_TTL_MS)
+    return result
   } catch (err) {
     console.warn(`[seatsAero] trips fetch failed:`, err)
-    return []
+    return { trips: [], bookingLinks: [] }
   }
 }
 
