@@ -16,6 +16,7 @@ const appPassword = process.env.APP_PASSWORD
 if (appPassword) {
   const expected = 'Basic ' + Buffer.from(`milescout:${appPassword}`).toString('base64')
   server.addHook('onRequest', async (req, reply) => {
+    if (req.url === '/health') return
     if (req.headers.authorization === expected) return
     reply.header('WWW-Authenticate', 'Basic realm="MileScout"')
     reply.code(401).send('Unauthorised')
@@ -26,6 +27,8 @@ await server.register(fastifyTRPCPlugin, {
   prefix: '/trpc',
   trpcOptions: { router: appRouter, createContext },
 })
+
+server.get('/health', async () => ({ ok: true }))
 
 if (process.env.NODE_ENV === 'production') {
   await server.register(fastifyStatic, {

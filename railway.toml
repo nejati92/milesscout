@@ -4,6 +4,6 @@ buildCommand = "npm install && npm run build"
 
 [deploy]
 startCommand = "npm start"
-healthcheckPath = "/trpc/search.programs"
+healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"
