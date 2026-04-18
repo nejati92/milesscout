@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import type { AvailabilityResult, Recommendation } from '../../shared/types'
 import { getBookingUrl } from '../utils/bookingLinks'
+import { trpc } from '../trpc'
 
 const AIRLINE_NAMES: Record<string, string> = {
   EK: 'Emirates', QR: 'Qatar Airways', EY: 'Etihad Airways', SQ: 'Singapore Airlines',
@@ -60,6 +61,132 @@ const FLAG_STYLE: Record<string, string> = {
 const FLAG_ICON: Record<string, string> = {
   sweet_spot: '★', routing_risk: '⚠', codeshare_risk: '⚠',
   fuel_surcharge: '£', transfer_bonus: '↑', exclusion_violation: '✕',
+}
+
+function fmtTime(iso: string) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
+}
+
+function fmtDuration(mins: number) {
+  if (!mins) return ''
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`
+}
+
+function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<typeof result['recommendation']> }) {
+  const { data, isLoading } = trpc.search.tripDetails.useQuery({ id: result.id, cabin: result.cabin }, { staleTime: 10 * 60 * 1000 })
+
+  const trips = data?.trips ?? []
+
+  return (
+    <div className="space-y-4">
+      {/* Flight segments */}
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-xs text-white/25 animate-pulse">
+          <span className="w-3 h-3 rounded-full border border-white/20 animate-spin border-t-transparent" />
+          Loading flight details…
+        </div>
+      ) : trips.length > 0 ? (
+        <div className="space-y-3">
+          {trips.map((trip, ti) => {
+            const segments = Array.isArray(trip?.AvailabilitySegments) ? trip.AvailabilitySegments : []
+            return (
+              <div key={trip?.ID ?? ti} className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  {trips.length > 1 && (
+                    <p className="text-xs text-white/25 font-medium uppercase tracking-wider">Option {ti + 1}</p>
+                  )}
+                  {trip.BookingLink && (
+                    <a href={trip.BookingLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                      className="ml-auto text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition no-underline">
+                      Book via {result.programName} →
+                    </a>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1">
+                  {segments.map((seg, si) => {
+                    const prev = si > 0 ? segments[si - 1] : null
+                    const layoverMins = prev
+                      ? Math.round((new Date(seg.DepartsAt).getTime() - new Date(prev.ArrivesAt).getTime()) / 60000)
+                      : 0
+                    return (
+                      <div key={si}>
+                        {si > 0 && layoverMins > 0 && (
+                          <div className="flex items-center gap-2 py-1 pl-2">
+                            <div className="w-px h-4 bg-white/10" />
+                            <span className="text-xs text-white/25">Layover {seg.DestinationAirport} · {fmtDuration(layoverMins)}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 bg-white/[0.03] border border-white/8 rounded-xl px-4 py-3">
+                          <span className="text-xs font-mono font-bold text-indigo-300 w-16 shrink-0">{seg.FlightNumber}</span>
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <div className="text-right shrink-0">
+                              <div className="text-sm font-mono font-bold text-white">{seg.OriginAirport}</div>
+                              <div className="text-xs text-white/30">{fmtTime(seg.DepartsAt)}</div>
+                            </div>
+                            <span className="flex-1 border-t border-dashed border-white/10 mx-2" />
+                            {seg.Duration > 0 && <span className="text-xs text-white/25 shrink-0">{fmtDuration(seg.Duration)}</span>}
+                            <span className="flex-1 border-t border-dashed border-white/10 mx-2" />
+                            <div className="text-left shrink-0">
+                              <div className="text-sm font-mono font-bold text-white">{seg.DestinationAirport}</div>
+                              <div className="text-xs text-white/30">{fmtTime(seg.ArrivesAt)}</div>
+                            </div>
+                          </div>
+                          {seg.AircraftName && (
+                            <span className="text-xs text-white/20 shrink-0 hidden sm:block">{seg.AircraftName}</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="text-xs text-white/20">No flight details available</p>
+      )}
+
+      {/* AI analysis */}
+      {rec && (
+        <div className="space-y-2 pt-1 border-t border-white/5">
+          <p className="text-sm font-semibold text-white/80">{rec.headline}</p>
+          <p className="text-sm text-white/50 leading-relaxed">{rec.explanation}</p>
+          {rec.flags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {rec.flags.map((flag, i) => (
+                <div key={i} className={`flex gap-1.5 text-xs px-3 py-1.5 rounded-lg border ${FLAG_STYLE[flag.type] ?? 'bg-white/5 text-white/40 border-white/10'}`}>
+                  <span className="font-bold shrink-0">{FLAG_ICON[flag.type] ?? '•'}</span>
+                  <span>{flag.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {rec.cppGbp != null && (
+            <span className="text-xs text-white/25">
+              {(rec.cppGbp * 100).toFixed(1)}p/pt
+              {rec.estimatedCashValueGbp != null && <span className="ml-2">≈ £{rec.estimatedCashValueGbp.toLocaleString()} cash</span>}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Fallback book button when no trips returned booking links */}
+      {!isLoading && trips.every((t) => !t.BookingLink) && (() => {
+        const url = getBookingUrl(result.source)
+        return url ? (
+          <div className="flex justify-end pt-1">
+            <a href={url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+              className="text-xs font-semibold bg-white/10 hover:bg-white/15 text-white/70 px-4 py-2 rounded-lg transition no-underline">
+              Book via {result.programName} →
+            </a>
+          </div>
+        ) : null
+      })()}
+    </div>
+  )
 }
 
 interface EnrichedResult extends AvailabilityResult {
@@ -256,7 +383,6 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
                 const rec = r.recommendation
                 const isExpanded = filters.expanded === r.id
                 const isHighlighted = filters.highlighted.includes(r.id)
-                const bookingUrl = getBookingUrl(r.source)
 
                 return (
                   <>
@@ -346,46 +472,7 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
                     {isExpanded && (
                       <tr key={`${r.id}-expanded`} className="bg-white/[0.03] border-b border-white/5">
                         <td colSpan={9} className="px-6 py-5">
-                          {rec ? (
-                            <div className="space-y-3">
-                              <p className="text-sm font-semibold text-white/80">{rec.headline}</p>
-                              <p className="text-sm text-white/50 leading-relaxed">{rec.explanation}</p>
-                              {rec.flags.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                  {rec.flags.map((flag, i) => (
-                                    <div key={i} className={`flex gap-1.5 text-xs px-3 py-1.5 rounded-lg border ${FLAG_STYLE[flag.type] ?? 'bg-white/5 text-white/40 border-white/10'}`}>
-                                      <span className="font-bold shrink-0">{FLAG_ICON[flag.type] ?? '•'}</span>
-                                      <span>{flag.message}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              <div className="flex items-center justify-between pt-1">
-                                {rec.cppGbp != null ? (
-                                  <span className="text-xs text-white/25">
-                                    {(rec.cppGbp * 100).toFixed(1)}p/pt
-                                    {rec.estimatedCashValueGbp != null && <span className="ml-2">≈ £{rec.estimatedCashValueGbp.toLocaleString()} cash</span>}
-                                  </span>
-                                ) : <span />}
-                                {bookingUrl && (
-                                  <a href={bookingUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-                                    className="text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition no-underline">
-                                    Book via {r.programName} →
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-white/25">No AI analysis for this result</span>
-                              {bookingUrl && (
-                                <a href={bookingUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
-                                  className="text-xs font-semibold bg-white/10 hover:bg-white/15 text-white/70 px-4 py-2 rounded-lg transition no-underline">
-                                  Book via {r.programName} →
-                                </a>
-                              )}
-                            </div>
-                          )}
+                          <ExpandedRow result={r} rec={rec} />
                         </td>
                       </tr>
                     )}

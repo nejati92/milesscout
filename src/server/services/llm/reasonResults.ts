@@ -7,7 +7,11 @@ import { SWEET_SPOTS } from '../../data/sweetSpots.js'
 import { ROUTING_RULES } from '../../data/routingRules.js'
 import { PROGRAMS } from '../../data/programs.js'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+let client: Anthropic | null = null
+function getClient() {
+  if (!client) client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  return client
+}
 
 const MODEL = 'claude-haiku-4-5-20251001'
 
@@ -57,7 +61,7 @@ export async function reasonResults(
   const dynamicPrompt = buildDynamicPrompt(parsed, resultsToReason, pointsBalances)
 
   try {
-    const stream = await client.messages.stream({
+    const stream = await getClient().messages.stream({
       model: MODEL,
       max_tokens: 1200,
       system: [

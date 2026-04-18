@@ -169,6 +169,63 @@ async function fetchProgram(
   }
 }
 
+export interface TripSegment {
+  OriginAirport: string
+  DestinationAirport: string
+  DepartsAt: string
+  ArrivesAt: string
+  FlightNumber: string
+  Duration: number
+  AircraftName: string
+  Cabin: string
+  FareClass: string
+  Order: number
+}
+
+export interface Trip {
+  ID: string
+  AvailabilityID: string
+  AvailabilitySegments: TripSegment[]
+  TotalDuration: number
+  Stops: number
+  FlightNumbers: string
+  DepartsAt: string
+  ArrivesAt: string
+  MileageCost: number
+  TotalTaxes: number
+  TaxesCurrency: string
+  RemainingSeats: number
+  Source: string
+  Cabin: string
+  BookingLink?: string
+}
+
+export async function fetchTripDetails(availabilityId: string): Promise<Trip[]> {
+  const apiKey = process.env.SEATS_AERO_API_KEY ?? ''
+  if (!apiKey) return []
+
+  const cacheKey = makeCacheKey({ tripId: availabilityId })
+  const cached = cacheGet<Trip[]>(cacheKey)
+  if (cached) return cached
+
+  try {
+    const response = await fetch(`${BASE_URL}/trips/${availabilityId}`, {
+      headers: { 'Partner-Authorization': apiKey, 'Content-Type': 'application/json' },
+    })
+    if (!response.ok) {
+      console.warn(`[seatsAero] trips ${response.status} for ${availabilityId}`)
+      return []
+    }
+    const json = await response.json() as { data: Trip[] }
+    const trips = json.data ?? []
+    cacheSet(cacheKey, trips, CACHE_TTL_MS)
+    return trips
+  } catch (err) {
+    console.warn(`[seatsAero] trips fetch failed:`, err)
+    return []
+  }
+}
+
 export interface SearchAvailabilityResult {
   results: AvailabilityResult[]
   partial: boolean // true if some programs failed / were rate limited

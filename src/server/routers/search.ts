@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { router, publicProcedure } from '../trpc.js'
 import { RawQuery, SearchResponse, ReasonResponse, ParsedQuery, Recommendation, AvailabilityResult } from '../../shared/types.js'
 import { parseQuery } from '../services/llm/parseQuery.js'
-import { searchAvailability } from '../services/seatsAero.js'
+import { searchAvailability, fetchTripDetails } from '../services/seatsAero.js'
 import { reasonResults } from '../services/llm/reasonResults.js'
 import { askAdvisor } from '../services/llm/askAdvisor.js'
 import { PROGRAMS } from '../data/programs.js'
@@ -101,6 +101,16 @@ export const searchRouter = router({
         context: input.context,
         history: input.history,
       })
+    }),
+
+  tripDetails: publicProcedure
+    .input(z.object({ id: z.string(), cabin: z.string() }))
+    .query(async ({ input }) => {
+      const all = await fetchTripDetails(input.id)
+      // cabin values: "economy","premium_economy","business","first" vs API "economy","premium","business","first"
+      const cabinNorm = (c: string) => c.replace('premium_economy', 'premium').toLowerCase()
+      const trips = all.filter((t) => cabinNorm(t.Cabin ?? '') === cabinNorm(input.cabin))
+      return { trips: trips.length ? trips : all }
     }),
 
   programs: publicProcedure

@@ -1,7 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { ParsedQuery, AvailabilityResult, Recommendation } from '../../../shared/types.js'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+let client: Anthropic | null = null
+function getClient() {
+  if (!client) client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  return client
+}
 
 // Common IATA codes so the LLM can map airline names → codes
 const AIRLINE_NAMES: Record<string, string> = {
@@ -141,7 +145,7 @@ ${resultsList}
 ADVICE: ${context.advice}`
 
   try {
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 400,
       system: [

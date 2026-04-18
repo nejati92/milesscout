@@ -2,7 +2,11 @@ import Anthropic from '@anthropic-ai/sdk'
 import { ParsedQuery } from '../../../shared/types.js'
 import type { Program } from '../../data/programs.js'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+let client: Anthropic | null = null
+function getClient() {
+  if (!client) client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  return client
+}
 
 const MODEL = 'claude-haiku-4-5-20251001'
 
@@ -105,7 +109,7 @@ export async function parseQuery(
   ].filter(Boolean).join('\n')
 
   try {
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: MODEL,
       max_tokens: 512,
       system: [
