@@ -11,6 +11,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const server = Fastify({ logger: { level: 'info' } })
 
+// Basic auth — set APP_PASSWORD env var to enable
+const appPassword = process.env.APP_PASSWORD
+if (appPassword) {
+  const expected = 'Basic ' + Buffer.from(`milescout:${appPassword}`).toString('base64')
+  server.addHook('onRequest', async (req, reply) => {
+    if (req.headers.authorization === expected) return
+    reply.header('WWW-Authenticate', 'Basic realm="MileScout"')
+    reply.code(401).send('Unauthorised')
+  })
+}
+
 await server.register(fastifyTRPCPlugin, {
   prefix: '/trpc',
   trpcOptions: { router: appRouter, createContext },

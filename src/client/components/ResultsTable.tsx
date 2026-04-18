@@ -68,7 +68,7 @@ interface EnrichedResult extends AvailabilityResult {
 
 interface Props {
   results: AvailabilityResult[]
-  recommendations: Recommendation[]
+  recommendations?: Recommendation[]
   filters: TableFilters
   onFiltersChange: (f: TableFilters) => void
 }
@@ -93,7 +93,7 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
   }
 
   const enriched: EnrichedResult[] = useMemo(() => {
-    const recMap = new Map(recommendations.map((r) => [r.result.id, r]))
+    const recMap = new Map((recommendations ?? []).map((r) => [r.result.id, r]))
     return results.map((r) => ({ ...r, recommendation: recMap.get(r.id) }))
   }, [results, recommendations])
 
@@ -271,6 +271,8 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
                           {rec ? (
                             <div className={`w-2 h-2 rounded-full shrink-0 ${VERDICT_DOT[rec.verdict]}`}
                               style={{ boxShadow: VERDICT_GLOW[rec.verdict] }} />
+                          ) : recommendations === undefined ? (
+                            <div className="w-2 h-2 rounded-full bg-white/20 animate-pulse" />
                           ) : (
                             <div className="w-2 h-2 rounded-full bg-white/10" />
                           )}

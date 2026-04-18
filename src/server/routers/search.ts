@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { router, publicProcedure } from '../trpc.js'
-import { RawQuery, SearchResponse, ParsedQuery, Recommendation, AvailabilityResult } from '../../shared/types.js'
+import { RawQuery, SearchResponse, ReasonResponse, ParsedQuery, Recommendation, AvailabilityResult } from '../../shared/types.js'
 import { parseQuery } from '../services/llm/parseQuery.js'
 import { searchAvailability } from '../services/seatsAero.js'
 import { reasonResults } from '../services/llm/reasonResults.js'
@@ -22,10 +22,10 @@ export const searchRouter = router({
       console.log('parsed', parsed)
 
       if (parsed.parseConfidence === 'low' && parsed.clarificationNeeded) {
-        return { parsed, rawResults: [], recommendations: [], filteredCount: 0, advice: parsed.clarificationNeeded, cacheHit: false }
+        return { parsed, rawResults: [], cacheHit: false }
       }
 
-      const { results: rawResults, partial, cacheHit } = await searchAvailability({
+      const { results: rawResults, cacheHit } = await searchAvailability({
         origins: parsed.originAirports,
         destinations: parsed.destinationAirports,
         startDate: parsed.departureDateFrom,
@@ -34,16 +34,32 @@ export const searchRouter = router({
         programs: parsed.programsToSearch,
       })
 
-      const { recommendations, advice } = await reasonResults({ parsed, rawResults, pointsBalances: input.pointsBalances })
+      return { parsed, rawResults, cacheHit }
+    }),
+
+  reason: publicProcedure
+    .input(z.object({
+      parsed: ParsedQuery,
+      rawResults: z.array(AvailabilityResult),
+      pointsBalances: z.record(z.string(), z.number()).optional(),
+      partial: z.boolean().optional(),
+    }))
+    .output(ReasonResponse)
+    .mutation(async ({ input }) => {
+      const { recommendations, advice } = await reasonResults({
+        parsed: input.parsed,
+        rawResults: input.rawResults,
+        pointsBalances: input.pointsBalances,
+      })
 
       const filteredCount = recommendations.filter(
         (r) => r.verdict === 'avoid' || r.flags.some((f) => f.type === 'exclusion_violation')
       ).length
 
       return {
-        parsed, rawResults, recommendations, filteredCount,
-        advice: advice + (partial ? ' (some programs unavailable)' : ''),
-        cacheHit,
+        recommendations,
+        filteredCount,
+        advice: advice + (input.partial ? ' (some programs unavailable)' : ''),
       }
     }),
 

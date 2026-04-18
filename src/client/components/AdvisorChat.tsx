@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { trpc } from '../trpc'
-import type { SearchResponse } from '../../shared/types'
+import type { SearchResponse, ReasonResponse } from '../../shared/types'
 import type { TableFilters } from './ResultsTable'
+
+type FullSearchData = SearchResponse & ReasonResponse
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -14,7 +16,7 @@ export interface ChatMessage {
 }
 
 interface Props {
-  searchData: SearchResponse | null
+  searchData: FullSearchData | null
   isRefreshing?: boolean
   originalQuery: string
   filters: TableFilters

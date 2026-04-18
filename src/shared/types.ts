@@ -65,10 +65,13 @@ export const Recommendation = z.object({
 export const SearchResponse = z.object({
   parsed: ParsedQuery,
   rawResults: z.array(AvailabilityResult),
+  cacheHit: z.boolean(),
+})
+
+export const ReasonResponse = z.object({
   recommendations: z.array(Recommendation),
   filteredCount: z.number(),
   advice: z.string(),
-  cacheHit: z.boolean(),
 })
 
 export type RawQuery = z.infer<typeof RawQuery>
@@ -76,3 +79,4 @@ export type ParsedQuery = z.infer<typeof ParsedQuery>
 export type AvailabilityResult = z.infer<typeof AvailabilityResult>
 export type Recommendation = z.infer<typeof Recommendation>
 export type SearchResponse = z.infer<typeof SearchResponse>
+export type ReasonResponse = z.infer<typeof ReasonResponse>
