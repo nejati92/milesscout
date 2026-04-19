@@ -19,10 +19,10 @@ function MicIcon() {
 }
 
 const EXAMPLES = [
-  'Business class London to Tokyo in March, Avios or Flying Blue',
-  'Cheapest Aeroplan redemption to Bangkok, avoid Middle East',
-  'London to New York October, nothing via Gulf carriers',
-  'Best value first class to Singapore with 150k Virgin points',
+  'Business class London to Tokyo in March',
+  'Cheapest Aeroplan to Bangkok',
+  'London → New York October, no Gulf carriers',
+  'First class Singapore, 150k Virgin points',
 ]
 
 function HomePage() {
@@ -39,27 +39,28 @@ function HomePage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-3rem)] flex flex-col items-center justify-center px-4 py-16">
-      {/* Glow */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center px-4 py-16">
 
       <div className="relative w-full max-w-2xl">
         {/* Badge */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 text-white/60 text-xs px-3 py-1.5 rounded-full">
+        <div className="flex justify-center mb-10">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-white/50"
+            style={{ background: 'var(--card-bg)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--card-border)' }}>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             Real-time award availability · AI-powered reasoning
           </div>
         </div>
 
-        <h1 className="text-5xl sm:text-6xl font-black text-center text-white tracking-tight leading-[1.05] mb-3">
-          Find your best<br />
+        {/* Heading */}
+        <h1 className="text-5xl sm:text-6xl font-black text-center text-white tracking-tight leading-[1.08] mb-4">
+          Find your best
+          <br />
           <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
             award flight
           </span>
         </h1>
-        <p className="text-white/40 text-center text-lg mb-10">
-          Describe your trip. MileScout searches real inventory and tells you exactly what to book.
+        <p className="text-white/40 text-center text-base mb-10 max-w-md mx-auto leading-relaxed">
+          Describe your trip in plain English. MileScout searches real availability and tells you exactly what to book.
         </p>
 
         {/* Points */}
@@ -67,95 +68,78 @@ function HomePage() {
           <PointsContext balances={pointsBalances} onChange={setPointsBalances} />
         </div>
 
-        {/* Search box */}
-        <div className={`relative border rounded-2xl overflow-hidden transition-all shadow-2xl shadow-black/50 ${
-          voice.listening
-            ? 'bg-indigo-950/40 border-indigo-500/40 shadow-indigo-500/10'
-            : 'bg-white/5 border-white/10 focus-within:border-indigo-500/50 focus-within:bg-white/[0.07]'
-        }`}>
+        {/* Search card */}
+        <div
+          className="overflow-hidden transition-all"
+          style={{
+            background: 'var(--card-bg)',
+            boxShadow: voice.listening ? '0 0 0 2px #6366f1, var(--card-shadow)' : 'var(--card-shadow)',
+            border: '1px solid var(--card-border)',
+            borderRadius: '20px',
+          }}
+        >
           {voice.listening && voice.stream ? (
-            /* Waveform recording UI */
             <div className="flex items-center gap-3 px-5 py-5">
               <WaveformVisualizer stream={voice.stream} height={52} />
-              <button
-                onClick={voice.cancel}
-                className="w-9 h-9 flex items-center justify-center rounded-xl text-white/40 hover:text-white/80 hover:bg-white/8 transition cursor-pointer shrink-0 text-xl leading-none"
-                title="Cancel"
-              >
-                ×
-              </button>
-              <button
-                onClick={voice.stop}
-                className="w-9 h-9 flex items-center justify-center rounded-xl bg-indigo-500/25 hover:bg-indigo-500/40 text-indigo-300 hover:text-indigo-200 transition cursor-pointer shrink-0 text-lg font-bold"
-                title="Done — transcribe"
-              >
-                ✓
-              </button>
+              <button onClick={voice.cancel} className="w-9 h-9 flex items-center justify-center rounded-xl text-white/40 hover:text-white/80 hover:bg-white/8 transition cursor-pointer text-xl leading-none">×</button>
+              <button onClick={voice.stop} className="w-9 h-9 flex items-center justify-center rounded-xl bg-indigo-500/25 hover:bg-indigo-500/40 text-indigo-300 transition cursor-pointer text-lg font-bold">✓</button>
             </div>
           ) : voice.transcribing ? (
-            /* Transcribing state */
-            <div className="flex items-center gap-3 px-5 py-5 h-[92px]">
-              <div className="flex-1 flex items-center gap-2">
-                <span className="flex gap-1">
-                  {[0, 100, 200].map((d) => (
-                    <span key={d} className="w-1.5 h-1.5 rounded-full bg-indigo-400/60 animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                  ))}
-                </span>
-                <span className="text-sm text-indigo-400/60">Transcribing…</span>
-              </div>
+            <div className="flex items-center gap-3 px-5 py-5 h-[88px]">
+              <span className="flex gap-1">{[0,100,200].map(d => <span key={d} className="w-1.5 h-1.5 rounded-full bg-indigo-400/60 animate-bounce" style={{ animationDelay: `${d}ms` }} />)}</span>
+              <span className="text-sm text-indigo-400/60">Transcribing…</span>
             </div>
           ) : (
-            /* Normal textarea */
             <textarea
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="e.g. Business class London to Tokyo in March, Avios or Flying Blue, avoid Middle East"
+              placeholder="e.g. Business class London to Tokyo in March, Avios or Flying Blue"
               rows={3}
-              className="w-full bg-transparent px-5 py-4 text-white placeholder:text-white/25 text-base resize-none outline-none"
+              className="w-full bg-transparent px-5 pt-5 pb-3 text-white placeholder:text-white/25 text-base resize-none outline-none"
               onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit() }}
             />
           )}
 
-          {/* Bottom bar — hidden while recording or transcribing */}
           {!voice.listening && !voice.transcribing && (
-            <div className="flex items-center justify-between px-4 pb-3 gap-2">
-              <span className="text-white/20 text-xs hidden sm:block">⌘ + ↵ to search</span>
-              {voice.supported && (
+            <div className="flex items-center justify-between px-4 pb-4 gap-2">
+              <span className="text-white/20 text-xs hidden sm:block">⌘↵ to search</span>
+              <div className="flex items-center gap-2 ml-auto">
+                {voice.supported && (
+                  <button
+                    type="button"
+                    onClick={voice.start}
+                    className={`flex items-center justify-center w-8 h-8 rounded-xl transition cursor-pointer ${voice.error ? 'text-amber-400/70' : 'text-white/30 hover:text-white/70 hover:bg-white/8'}`}
+                    title={voice.error ?? 'Search by voice'}
+                  >
+                    <MicIcon />
+                  </button>
+                )}
                 <button
-                  type="button"
-                  onClick={voice.start}
-                  className={`flex items-center justify-center w-8 h-8 rounded-lg transition cursor-pointer shrink-0 ${
-                    voice.error ? 'text-amber-400/70' : 'text-white/30 hover:text-white/60 hover:bg-white/8'
-                  }`}
-                  title={voice.error ?? 'Search by voice'}
+                  onClick={() => submit()}
+                  disabled={!query.trim()}
+                  className="text-sm font-bold px-5 py-2.5 rounded-xl transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-30"
+                  style={{ background: query.trim() ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : undefined, color: query.trim() ? 'white' : undefined }}
                 >
-                  <MicIcon />
+                  Search →
                 </button>
-              )}
-              <button
-                onClick={() => submit()}
-                disabled={!query.trim()}
-                className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-white/10 disabled:text-white/20 text-white text-sm font-semibold px-5 py-2 rounded-xl transition cursor-pointer disabled:cursor-not-allowed ml-auto"
-              >
-                Search →
-              </button>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Error message */}
         {voice.error && !voice.listening && (
           <p className="mt-2 text-xs text-amber-400/70 text-center">{voice.error}</p>
         )}
 
         {/* Examples */}
         {!voice.listening && !voice.transcribing && (
-          <div className="mt-5 flex flex-wrap gap-2 justify-center">
+          <div className="mt-6 flex flex-wrap gap-2 justify-center">
             {EXAMPLES.map((ex) => (
               <button
                 key={ex}
                 onClick={() => submit(ex)}
-                className="text-xs text-white/40 hover:text-white/80 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/15 px-3 py-1.5 rounded-full transition cursor-pointer"
+                className="text-xs text-white/40 hover:text-white/80 px-3.5 py-2 rounded-full transition cursor-pointer"
+                style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}
               >
                 {ex}
               </button>

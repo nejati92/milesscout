@@ -84,31 +84,29 @@ function ResultsPage() {
 
   return (
     <div className="min-h-[calc(100vh-3rem)] flex flex-col">
-      {/* Top bar */}
-      <div className="border-b border-white/5 bg-white/[0.02]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-          <Link to="/" className="text-white/30 hover:text-white/60 text-sm transition no-underline shrink-0">←</Link>
-          <div className="flex-1 text-sm text-white/40 truncate">{currentQuery}</div>
+      <div className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
+
+        {/* Top bar — floating card */}
+        <div className="flex items-center gap-3 px-4 py-3 overflow-hidden" style={{ background: 'var(--card-bg)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--card-border)', borderRadius: '16px' }}>
+          <Link to="/" className="text-white/30 hover:text-white/70 text-sm transition no-underline shrink-0 font-bold">←</Link>
+          <div className="flex-1 text-sm text-white/50 truncate font-medium">{currentQuery}</div>
           {search.isPending && searchData && (
             <span className="text-xs text-indigo-400/60 animate-pulse shrink-0">Searching…</span>
           )}
           {isReasoning && (
-            <span className="text-xs text-violet-400/60 animate-pulse shrink-0">Analysing…</span>
+            <span className="text-xs text-lime-400/70 animate-pulse shrink-0">Analysing…</span>
           )}
           {searchData && !search.isPending && (
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               {searchData.cacheHit && <span className="text-xs text-white/20 bg-white/5 px-2 py-1 rounded-full">cached</span>}
-              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                searchData.parsed.parseConfidence === 'high' ? 'bg-emerald-500/10 text-emerald-400' :
-                searchData.parsed.parseConfidence === 'medium' ? 'bg-amber-500/10 text-amber-400' :
-                'bg-red-500/10 text-red-400'
+              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                searchData.parsed.parseConfidence === 'high' ? 'bg-emerald-500/15 text-emerald-400' :
+                searchData.parsed.parseConfidence === 'medium' ? 'bg-amber-500/15 text-amber-400' :
+                'bg-red-500/15 text-red-400'
               }`}>{searchData.parsed.parseConfidence} confidence</span>
             </div>
           )}
         </div>
-      </div>
-
-      <div className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-8">
 
         {isFirstLoad && (
           <div className="flex flex-col items-center justify-center py-32 gap-6">
@@ -187,25 +185,23 @@ function ResultsPage() {
 
             {/* Tabs — only for return searches */}
             {isReturn && (
-              <div className="flex gap-1 bg-white/[0.03] border border-white/8 rounded-xl p-1 w-fit">
+              <div className="flex gap-1 p-1 w-fit" style={{ background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)', borderRadius: '14px' }}>
                 <button
                   onClick={() => setActiveTab('outbound')}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition cursor-pointer ${
-                    activeTab === 'outbound'
-                      ? 'bg-indigo-600 text-white shadow'
-                      : 'text-white/40 hover:text-white/70'
-                  }`}
+                  className="px-5 py-2 rounded-xl text-sm font-bold transition cursor-pointer"
+                  style={activeTab === 'outbound'
+                    ? { background: 'var(--filter-active-bg)', color: '#ffffff' }
+                    : { color: 'var(--filter-inactive-text)' }}
                 >
                   ↗ Outbound
                   <span className="ml-2 text-xs opacity-60">{searchData.rawResults.length}</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('inbound')}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition cursor-pointer ${
-                    activeTab === 'inbound'
-                      ? 'bg-indigo-600 text-white shadow'
-                      : 'text-white/40 hover:text-white/70'
-                  }`}
+                  className="px-5 py-2 rounded-xl text-sm font-bold transition cursor-pointer"
+                  style={activeTab === 'inbound'
+                    ? { background: 'var(--filter-active-bg)', color: '#ffffff' }
+                    : { color: 'var(--filter-inactive-text)' }}
                 >
                   ↙ Return
                   {reasonInbound.isPending
@@ -224,9 +220,12 @@ function ResultsPage() {
             )}
 
             {activeResults.length > 0 && activeReasonData?.advice && (
-              <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
-                <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-3">Strategic Advice</p>
-                <p className="text-sm text-white/50 leading-relaxed">{activeReasonData.advice}</p>
+              <div className="p-5" style={{ background: 'var(--card-bg)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--card-border)', borderRadius: '20px' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-lime-400" style={{ boxShadow: '0 0 6px rgba(163,230,53,0.8)' }} />
+                  <p className="text-xs font-bold text-lime-400 uppercase tracking-wider">AI Analysis</p>
+                </div>
+                <p className="text-sm text-white/60 leading-relaxed">{activeReasonData.advice}</p>
               </div>
             )}
 

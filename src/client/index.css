@@ -8,16 +8,33 @@
 
 @layer base {
   :root {
-    --app-bg: #08080f;
-    --app-bg-80: rgb(8 8 15 / 0.8);
-    --app-tooltip: #1a1a2e;
+    --app-bg: #0c0b10;
+    --app-bg-80: rgb(12 11 16 / 0.88);
+    --app-tooltip: #1e1c2a;
+    --card-bg: rgb(255 255 255 / 0.08);
+    --card-bg-raised: rgb(255 255 255 / 0.12);
+    --card-border: rgb(255 255 255 / 0.11);
+    --card-shadow: 0 8px 40px rgb(0 0 0 / 0.55), 0 2px 8px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.06);
+    --filter-active-bg: linear-gradient(135deg, #6366f1, #8b5cf6);
+    --filter-active-text: #ffffff;
+    --filter-inactive-bg: rgba(255,255,255,0.08);
+    --filter-inactive-border: rgba(255,255,255,0.11);
+    --filter-inactive-text: rgba(255,255,255,0.4);
   }
 
   html.light {
-    --app-bg: #f2f2f7;
-    --app-bg-80: rgb(242 242 247 / 0.88);
-    --app-tooltip: #e2e2ea;
-    /* Flip white↔near-black so all text-white/X, bg-white/X, border-white/X adapt */
+    --app-bg: #ede8df;
+    --app-bg-80: rgb(237 232 223 / 0.92);
+    --app-tooltip: #ffffff;
+    --card-bg: #ffffff;
+    --card-bg-raised: #f7f4ef;
+    --card-border: rgba(0,0,0,0.08);
+    --card-shadow: 0 4px 24px rgb(0 0 0 / 0.09), 0 1px 4px rgb(0 0 0 / 0.06);
+    --filter-inactive-bg: rgba(0,0,0,0.05);
+    --filter-inactive-border: rgba(0,0,0,0.12);
+    --filter-inactive-text: rgba(0,0,0,0.5);
+    --filter-active-bg: linear-gradient(135deg, #6366f1, #8b5cf6);
+    --filter-active-text: #ffffff;
     --color-white: oklch(0.12 0.01 270);
     --color-black: oklch(0.97 0 0);
     color-scheme: light;
@@ -29,10 +46,25 @@
     background-color: var(--app-bg);
     @apply text-white antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    transition: background-color 0.2s ease;
+    transition: background-color 0.25s ease;
   }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { @apply bg-white/10 rounded-full; }
+}
+
+@layer components {
+  .ms-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+    border-radius: 20px;
+  }
+  .ms-card-raised {
+    background: var(--card-bg-raised);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+    border-radius: 20px;
+  }
 }

@@ -144,15 +144,15 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
     : 'Ask anything — transfers, sweet spots, how programs work…'
 
   return (
-    <div className="bg-white/[0.03] border border-white/8 rounded-2xl overflow-hidden">
+    <div className="overflow-hidden" style={{ background: 'var(--card-bg)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--card-border)', borderRadius: '20px' }}>
       {/* Header */}
-      <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
+      <div className="px-5 py-3.5 border-b flex items-center gap-2.5" style={{ borderColor: 'var(--card-border)' }}>
         <div
-          className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-amber-400 animate-pulse' : 'bg-indigo-400'}`}
-          style={!isRefreshing ? { boxShadow: '0 0 8px rgba(129,140,248,0.8)' } : undefined}
+          className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-amber-400 animate-pulse' : 'bg-lime-400'}`}
+          style={!isRefreshing ? { boxShadow: '0 0 8px rgba(163,230,53,0.8)' } : undefined}
         />
-        <span className="text-sm font-semibold text-white/70">
-          {isRefreshing ? 'Searching…' : 'Ask MileScout'}
+        <span className="text-sm font-bold text-white/80">
+          {isRefreshing ? 'Searching…' : 'AI Advisor'}
         </span>
         {messages.length > 0 && !isRefreshing && (
           <button
@@ -166,14 +166,14 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
 
       {/* Active filter summary bar */}
       {(filters.program || filters.airline || filters.cabin || filters.directOnly || filters.dateFrom || filters.dateTo) && (
-        <div className="px-5 py-2 border-b border-white/5 flex flex-wrap gap-1.5">
+        <div className="px-5 py-2 border-b flex flex-wrap gap-1.5" style={{ borderColor: 'var(--card-border)' }}>
           <span className="text-xs text-white/20">Active:</span>
-          {filters.program && <span className="text-xs bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-full">{filters.program}</span>}
-          {filters.airline && <span className="text-xs bg-violet-500/10 text-violet-300 px-2 py-0.5 rounded-full">{filters.airline}</span>}
-          {filters.cabin && <span className="text-xs bg-fuchsia-500/10 text-fuchsia-300 px-2 py-0.5 rounded-full capitalize">{filters.cabin}</span>}
-          {filters.directOnly && <span className="text-xs bg-emerald-500/10 text-emerald-300 px-2 py-0.5 rounded-full">Direct only</span>}
+          {filters.program && <span className="text-xs px-2 py-0.5 rounded-full font-semibold text-white" style={{ background: 'var(--filter-active-bg)' }}>{filters.program}</span>}
+          {filters.airline && <span className="text-xs px-2 py-0.5 rounded-full font-semibold text-white" style={{ background: 'var(--filter-active-bg)' }}>{filters.airline}</span>}
+          {filters.cabin && <span className="text-xs px-2 py-0.5 rounded-full font-semibold text-white capitalize" style={{ background: 'var(--filter-active-bg)' }}>{filters.cabin}</span>}
+          {filters.directOnly && <span className="text-xs px-2 py-0.5 rounded-full font-semibold text-white" style={{ background: 'var(--filter-active-bg)' }}>Direct only</span>}
           {(filters.dateFrom || filters.dateTo) && (
-            <span className="text-xs bg-violet-500/10 text-violet-300 px-2 py-0.5 rounded-full">
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold text-white" style={{ background: 'var(--filter-active-bg)' }}>
               {filters.dateFrom ?? '…'} – {filters.dateTo ?? '…'}
             </span>
           )}
@@ -186,12 +186,12 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-white text-[9px] font-black">M</span>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: 'linear-gradient(135deg, #84cc16, #22c55e)' }}>
+                  <span className="text-white text-[9px] font-black">AI</span>
                 </div>
               )}
               <div className="flex flex-col gap-1.5 max-w-[85%]">
-                <div className={`text-sm leading-relaxed rounded-2xl px-4 py-2.5 ${msg.role === 'user' ? 'bg-indigo-600/25 text-white/80 rounded-tr-sm' : 'bg-white/5 text-white/70 rounded-tl-sm'}`}>
+                <div className={`text-sm leading-relaxed rounded-2xl px-4 py-2.5 ${msg.role === 'user' ? 'bg-indigo-600/25 text-white/80 rounded-tr-sm' : 'bg-white/[0.05] text-white/70 rounded-tl-sm'}`}>
                   {msg.content}
                 </div>
                 {/* Action chip */}
@@ -211,10 +211,10 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
 
           {ask.isPending && (
             <div className="flex gap-3 justify-start">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
-                <span className="text-white text-[9px] font-black">M</span>
+              <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #84cc16, #22c55e)' }}>
+                <span className="text-white text-[9px] font-black">AI</span>
               </div>
-              <div className="bg-white/5 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
+              <div className="bg-white/[0.05] rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
                 {[0, 150, 300].map((d) => (
                   <span key={d} className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: `${d}ms` }} />
                 ))}
@@ -226,7 +226,7 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
       )}
 
       {/* Input */}
-      <div className={`flex items-center gap-2 px-4 py-3 ${messages.length > 0 ? 'border-t border-white/5' : ''}`}>
+      <div className={`flex items-center gap-2 px-4 py-3 ${messages.length > 0 ? 'border-t' : ''}`} style={messages.length > 0 ? { borderColor: 'var(--card-border)' } : undefined}>
         {voice.listening && voice.stream ? (
           /* Waveform recording row */
           <>
@@ -270,7 +270,7 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
             <button
               onClick={send}
               disabled={!input.trim() || ask.isPending}
-              className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 disabled:text-white/15 transition cursor-pointer disabled:cursor-not-allowed shrink-0"
+              className="text-xs font-bold text-lime-400 hover:text-lime-300 disabled:text-white/15 transition cursor-pointer disabled:cursor-not-allowed shrink-0"
             >
               {ask.isPending ? '…' : 'Ask →'}
             </button>

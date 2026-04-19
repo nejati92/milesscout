@@ -530,7 +530,7 @@ function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<
           ) : visible.map((trip) => {
             const segs = Array.isArray(trip.AvailabilitySegments) ? trip.AvailabilitySegments : []
             return (
-              <div key={trip.ID} className="bg-white/[0.02] border border-white/8 rounded-xl overflow-hidden">
+              <div key={trip.ID} className="overflow-hidden rounded-xl" style={{ background: 'var(--card-bg-raised)', border: '1px solid var(--card-border)' }}>
                 {/* Trip header */}
                 <div className="flex items-center gap-4 px-4 py-2.5 border-b border-white/5">
                   <div>
@@ -716,7 +716,10 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
           const active = filters.program === p
           return (
             <button key={p} onClick={() => update({ program: active ? null : p })}
-              className={`text-xs px-3 py-1.5 rounded-lg border transition cursor-pointer font-medium ${active ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300' : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70 hover:border-white/20'}`}>
+              className="text-xs px-3 py-1.5 rounded-lg border transition cursor-pointer font-semibold"
+              style={active
+                ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', borderColor: 'transparent' }
+                : { background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
               {label}
             </button>
           )
@@ -729,7 +732,10 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
             return (
               <span key={a} className="relative group/chip">
                 <button onClick={() => update({ airline: active ? null : a })}
-                  className={`text-xs px-2.5 py-1.5 rounded-lg border font-mono transition cursor-pointer font-semibold ${active ? 'bg-violet-500/20 border-violet-500/40 text-violet-300' : 'bg-white/5 border-white/10 text-white/30 hover:text-white/60 hover:border-white/20'}`}>
+                  className="text-xs px-2.5 py-1.5 rounded-lg font-mono transition cursor-pointer font-bold"
+                  style={active
+                    ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }
+                    : { background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
                   {a}
                 </button>
                 {AIRLINE_NAMES[a] && (
@@ -748,7 +754,10 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
             const active = filters.cabin === c
             return (
               <button key={c} onClick={() => update({ cabin: active ? null : c })}
-                className={`text-xs px-2.5 py-1.5 rounded-lg border transition cursor-pointer capitalize ${active ? 'bg-fuchsia-500/20 border-fuchsia-500/40 text-fuchsia-300' : 'bg-white/5 border-white/10 text-white/30 hover:text-white/60 hover:border-white/20'}`}>
+                className="text-xs px-2.5 py-1.5 rounded-lg transition cursor-pointer capitalize font-semibold"
+                style={active
+                  ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }
+                  : { background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
                 {c}
               </button>
             )
@@ -758,13 +767,17 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
         <div className="w-px h-4 bg-white/10" />
         <button
           onClick={() => update({ directOnly: !filters.directOnly })}
-          className={`text-xs px-2.5 py-1.5 rounded-lg border transition cursor-pointer font-medium ${filters.directOnly ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' : 'bg-white/5 border-white/10 text-white/30 hover:text-white/60 hover:border-white/20'}`}>
+          className="text-xs px-2.5 py-1.5 rounded-lg transition cursor-pointer font-semibold"
+          style={filters.directOnly
+            ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }
+            : { background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
           Direct only
         </button>
 
         {(filters.dateFrom || filters.dateTo) && (
           <button onClick={() => update({ dateFrom: null, dateTo: null })}
-            className="text-xs px-2.5 py-1.5 rounded-lg border bg-violet-500/20 border-violet-500/40 text-violet-300 transition cursor-pointer font-medium">
+            className="text-xs px-2.5 py-1.5 rounded-lg transition cursor-pointer font-semibold"
+            style={{ background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }}>
             {filters.dateFrom && filters.dateTo ? `${filters.dateFrom} – ${filters.dateTo}` : filters.dateFrom ?? filters.dateTo} ×
           </button>
         )}
@@ -779,7 +792,7 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
       </div>
 
       {/* Table */}
-      <div className="bg-white/[0.03] border border-white/8 rounded-2xl overflow-hidden">
+      <div className="overflow-hidden" style={{ background: 'var(--card-bg)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--card-border)', borderRadius: '20px' }}>
 
         {/* Mobile card list */}
         <div className="sm:hidden divide-y divide-white/5">
