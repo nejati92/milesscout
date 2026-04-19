@@ -2,6 +2,18 @@ import { useState, useRef, useEffect } from 'react'
 import { trpc } from '../trpc'
 import type { SearchResponse, ReasonResponse } from '../../shared/types'
 import type { TableFilters } from './ResultsTable'
+import { useVoice } from '../hooks/useVoice'
+import { WaveformVisualizer } from './WaveformVisualizer'
+
+function MicIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+    </svg>
+  )
+}
 
 type FullSearchData = SearchResponse & ReasonResponse
 
@@ -31,6 +43,7 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const ask = trpc.search.ask.useMutation()
+  const voice = useVoice((text) => setInput((v) => v ? v + ' ' + text : text))
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -213,24 +226,56 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
       )}
 
       {/* Input */}
-      <div className={`flex items-center gap-3 px-5 py-3.5 ${messages.length > 0 ? 'border-t border-white/5' : ''}`}>
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') send() }}
-          placeholder={placeholder}
-          disabled={ask.isPending || isRefreshing}
-          className="flex-1 bg-transparent text-sm text-white placeholder:text-white/20 outline-none disabled:opacity-50"
-        />
-        <button
-          onClick={send}
-          disabled={!input.trim() || ask.isPending || !searchData || isRefreshing}
-          className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 disabled:text-white/15 transition cursor-pointer disabled:cursor-not-allowed shrink-0"
-        >
-          {ask.isPending ? '…' : 'Ask →'}
-        </button>
+      <div className={`flex items-center gap-2 px-4 py-3 ${messages.length > 0 ? 'border-t border-white/5' : ''}`}>
+        {voice.listening && voice.stream ? (
+          /* Waveform recording row */
+          <>
+            <WaveformVisualizer stream={voice.stream} height={28} />
+            <button onClick={voice.cancel} className="text-white/30 hover:text-white/70 text-lg leading-none cursor-pointer transition shrink-0" title="Cancel">×</button>
+            <button onClick={voice.stop} className="text-indigo-400 hover:text-indigo-300 font-bold text-sm cursor-pointer transition shrink-0" title="Done">✓</button>
+          </>
+        ) : voice.transcribing ? (
+          <>
+            <span className="flex gap-1 shrink-0">
+              {[0, 100, 200].map((d) => (
+                <span key={d} className="w-1 h-1 rounded-full bg-indigo-400/50 animate-bounce" style={{ animationDelay: `${d}ms` }} />
+              ))}
+            </span>
+            <span className="text-xs text-indigo-400/50 flex-1">Transcribing…</span>
+          </>
+        ) : (
+          /* Normal input row */
+          <>
+            {voice.supported && (
+              <button
+                type="button"
+                onClick={voice.start}
+                disabled={ask.isPending || isRefreshing}
+                className={`flex items-center justify-center w-7 h-7 rounded-lg transition cursor-pointer shrink-0 disabled:opacity-40 ${voice.error ? 'text-amber-400/70' : 'text-white/25 hover:text-white/55 hover:bg-white/8'}`}
+                title={voice.error ?? 'Voice input'}
+              >
+                <MicIcon />
+              </button>
+            )}
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') send() }}
+              placeholder={placeholder}
+              disabled={ask.isPending || isRefreshing}
+              className="flex-1 bg-transparent text-sm text-white placeholder:text-white/20 outline-none disabled:opacity-50 min-w-0"
+            />
+            <button
+              onClick={send}
+              disabled={!input.trim() || ask.isPending || !searchData || isRefreshing}
+              className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 disabled:text-white/15 transition cursor-pointer disabled:cursor-not-allowed shrink-0"
+            >
+              {ask.isPending ? '…' : 'Ask →'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

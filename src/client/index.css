@@ -4,6 +4,8 @@
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+@custom-variant light (&:is(.light, .light *));
+
 @layer base {
   :root {
     --app-bg: #08080f;

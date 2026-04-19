@@ -51,12 +51,12 @@ const VERDICT_DOT  = { recommended: 'bg-emerald-400', consider: 'bg-amber-400', 
 const VERDICT_TEXT = { recommended: 'text-emerald-400', consider: 'text-amber-400', avoid: 'text-red-400' }
 const VERDICT_LABEL = { recommended: 'Recommended', consider: 'Consider', avoid: 'Avoid' }
 const FLAG_STYLE: Record<string, string> = {
-  sweet_spot:          'bg-indigo-500/10 text-indigo-300 border-indigo-500/20',
-  routing_risk:        'bg-orange-500/10 text-orange-300 border-orange-500/20',
-  codeshare_risk:      'bg-red-500/10 text-red-300 border-red-500/20',
-  fuel_surcharge:      'bg-yellow-500/10 text-yellow-300 border-yellow-500/20',
-  transfer_bonus:      'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
-  exclusion_violation: 'bg-red-500/20 text-red-300 border-red-500/30',
+  sweet_spot:          'bg-indigo-500/20 text-indigo-300 light:text-indigo-700 border-indigo-500/30',
+  routing_risk:        'bg-orange-500/20 text-orange-300 light:text-orange-700 border-orange-500/30',
+  codeshare_risk:      'bg-red-500/20 text-red-300 light:text-red-700 border-red-500/30',
+  fuel_surcharge:      'bg-yellow-500/20 text-yellow-300 light:text-yellow-700 border-yellow-500/30',
+  transfer_bonus:      'bg-emerald-500/20 text-emerald-300 light:text-emerald-700 border-emerald-500/30',
+  exclusion_violation: 'bg-red-500/25 text-red-300 light:text-red-700 border-red-500/40',
 }
 const FLAG_ICON: Record<string, string> = {
   sweet_spot: '★', routing_risk: '⚠', codeshare_risk: '⚠',
@@ -72,6 +72,277 @@ function fmtTime(iso: string) {
 function fmtDuration(mins: number) {
   if (!mins) return ''
   return `${Math.floor(mins / 60)}h ${mins % 60}m`
+}
+
+function shortAircraft(name: string): string {
+  if (!name) return ''
+  // Airbus: A320, A321, A330, A350, A380 etc.
+  const airbus = name.match(/A-?(\d{3})/i)
+  if (airbus) return `A${airbus[1]}`
+  // Boeing: 737, 747, 767, 777, 787
+  const boeing = name.match(/(\d{3})/)
+  if (boeing) return boeing[1]
+  // Fallback: first 5 chars
+  return name.slice(0, 5)
+}
+
+// Keys are shortAircraft() outputs ("A350", "777" etc.) and IATA type codes ("77W", "359" etc.)
+const AIRCRAFT_SLUG: Record<string, string> = {
+  // Airbus — shortAircraft keys
+  'A220': 'airbus-a220-300',
+  'A318': 'airbus-a318',
+  'A319': 'airbus-a319',
+  'A320': 'airbus-a320',
+  'A321': 'airbus-a321',
+  'A330': 'airbus-a330-300',
+  'A340': 'airbus-a340',
+  'A350': 'airbus-a350-900',
+  'A380': 'airbus-a380',
+  // Boeing — shortAircraft keys
+  '717': 'boeing-717',
+  '737': 'boeing-737-800',
+  '747': 'boeing-747',
+  '757': 'boeing-757-200',
+  '767': 'boeing-767-300er',
+  '777': 'boeing-777-300er',
+  '787': 'boeing-787-9',
+  // Embraer — shortAircraft keys
+  'E170': 'embraer-e170',
+  'E175': 'embraer-e175',
+  'E190': 'embraer-e190',
+  'E195': 'embraer-e195',
+  // IATA aircraft type codes
+  '221': 'airbus-a220-100',  '223': 'airbus-a220-300',
+  '31N': 'airbus-a319neo',
+  '32A': 'airbus-a320neo',   '32N': 'airbus-a320neo',
+  '32Q': 'airbus-a321neo',   '32S': 'airbus-a321neo',
+  '332': 'airbus-a330-200',  '333': 'airbus-a330-300',
+  '338': 'airbus-a330-800neo', '339': 'airbus-a330-900neo',
+  '351': 'airbus-a350-1000', '359': 'airbus-a350-900',
+  '388': 'airbus-a380',
+  '738': 'boeing-737-800',   '739': 'boeing-737-900',
+  '7M8': 'boeing-737-max-8', '7M9': 'boeing-737-max-9',
+  '744': 'boeing-747',       '748': 'boeing-747',
+  '752': 'boeing-757-200',   '753': 'boeing-757-300',
+  '762': 'boeing-767-200er', '763': 'boeing-767-300er', '764': 'boeing-767-400er',
+  '772': 'boeing-777-200er', '77L': 'boeing-777-200lr',
+  '77W': 'boeing-777-300er', '773': 'boeing-777-300er',
+  '788': 'boeing-787-8',     '789': 'boeing-787-9',     '781': 'boeing-787-10',
+  'E70': 'embraer-e170',     'E75': 'embraer-e175',
+  'E90': 'embraer-e190',     'E95': 'embraer-e195',
+  '290': 'embraer-e190-e2',  '295': 'embraer-e195-e2',
+  'ER4': 'embraer-erj145',
+  'CR2': 'bombardier-crj-200', 'CR7': 'bombardier-crj-700',
+  'CR9': 'bombardier-crj-900', 'CRK': 'bombardier-crj1000',
+  'AT4': 'atr-42-600',       'AT7': 'atr-72-600',
+  'DH4': 'de-havilland-dash-8-q400',
+  'SU9': 'sukhoi-ssj-100-95',
+}
+
+const SEATMAPS_SLUG: Record<string, string> = {
+  '0E': '0e-north-west-aircompany', '0V': '0v-vasco', '2F': '2f-azul-conecta', '2I': '2i-star-peru',
+  '2J': '2j-air-burkina', '2K': '2k-avianca-ecuador', '2L': '2l-helvetic-airways', '2M': '2m-maya-island-air',
+  '2P': '2p-pal-express', '2R': '2r-sunlight-air', '2S': '2s-southwind', '2U': '2u-fly-khiva',
+  '2W': '2w-world-2-fly', '3B': '3b-bestfly-cabo-verde', '3C': '3c-air-chathams', '3F': '3f-flyone-armenia',
+  '3H': '3h-air-inuit', '3J': '3j-jubba-airways-ke', '3L': '3l-air-arabia-abu-dhabi', '3N': '3n-air-urga',
+  '3O': '3o-air-arabia-maroc', '3P': '3p-world-2-fly-portugal', '3R': '3r-divi-divi-air', '3S': '3s*-air-antilles',
+  '3U': '3u-sichuan-airlines', '3W': '3w-malawi-airlines', '4A': '4a-atsa', '4C': '4c-latam-colombia',
+  '4F': '4f-freedom-airline', '4G': '4g-gazpromavia', '4H': '4h*-hi-air', '4L': '4l-oneclick',
+  '4M': '4m-mga', '4N': '4n-air-north', '4R': '4r-star-east-airlines', '4S': '4s-red-sea-airlines',
+  '4T': '4t-rise-air', '4Y': '4y-discover-airlines', '4Z': '4z-airlink', '5D': '5d-aeromexico-connect',
+  '5E': '5e-aero', '5F': '5f-flyone', '5G': '5g-shirak-avia', '5J': '5j-cebu-pacific-air',
+  '5K': '5k-hi-fly', '5L': '5l-liat-air', '5M': '5m-mel-air', '5N': '5n-smartavia',
+  '5O': '5o-asl-airlines', '5Q': '5q-holiday-europe', '5T': '5t-canadian-north', '5U': '5u*-lade',
+  '5W': '5w-wizz-air-abu-dhabi', '5Y': '5y-atlas-air', '5Z': '5z-cemair', '6A': '6a-armenia-airways',
+  '6B': '6b-tui-fly-nordic', '6E': '6e-indigo', '6G': '6g-go2sky', '6H': '6h-israir',
+  '6I': '6i-air-alsie', '6J': '6j-solaseed-air', '6L': '6l-hac', '6O': '6o-iberojet-portugal',
+  '6R': '6r-alrosa', '7C': '7c-jeju-air', '7G': '7g-starflyer', '7M': '7m-map-linhas-aereas',
+  '7P': '7p-air-panama', '7R': '7r-rusline', '7V': '7v-fedair', '7W': '7w-windrose-airlines',
+  '7Y': '7y-mann-yadanarpon', '7Z': '7z-z-air', '8B': '8b-transnusa', '8D': '8d-fitsair',
+  '8E': '8e-bering-air', '8G': '8g-aero-dili', '8H': '8h-bh-air', '8J': '8j-ecojet',
+  '8L': '8l-lucky-air', '8M': '8m-myanmar-airways', '8N': '8n-regional-air-services', '8P': '8p-pacific-coastal-airlines',
+  '8R': '8r-amelia-international', '8T': '8t-air-tindi', '8U': '8u-afriqiyah-airways', '8W': '8w-fly-all-ways',
+  '8Y': '8y-pan-pacific-airlines', '9C': '9c-spring-airlines', '9D': '9d-genghis-khan-air', '9E': '9e-endeavor-air',
+  '9G': '9g-sun-phuquoc-airways', '9H': '9h-air-changan', '9I': '9i-alliance-air', '9K': '9k-cape-air',
+  '9L': '9l-airtanker', '9M': '9m-central-mountain-air', '9P': '9p-fly-jinnah', '9R': '9r-satena',
+  '9S': '9s-air-samarkand', '9U': '9u-air-moldova', '9X': '9x-southern-airways-express', 'A0': 'a0-ba-euroflyer',
+  'A2': 'a2-animawings', 'A3': 'a3-aegean-airlines', 'A4': 'a4-azimuth', 'A5': 'a5-air-france-hop',
+  'A6': 'a6-air-travel', 'A9': 'a9-georgian-airways', 'AA': 'aa-american-airlines', 'AC': 'ac-air-canada',
+  'AD': 'ad-azul', 'AE': 'ae-mandarin-airlines', 'AF': 'af-air-france', 'AFE': 'afe-airfast-indonesia',
+  'AG': 'ag-aruba-airlines', 'AH': 'ah-air-algerie', 'AI': 'ai-air-india', 'AK': 'ak-airasia',
+  'AL': 'al-malta-air', 'AM': 'am-aeromexico', 'AN': 'an-advanced-air', 'AP': 'ap-albastar',
+  'AQ': 'aq-9-air', 'AR': 'ar-aerolineas-arg', 'AS': 'as-alaska-airlines', 'AT': 'at-royal-air-maroc',
+  'ATV': 'atv*-air-uniqon', 'AV': 'av-avianca', 'AW': 'aw-africa-world', 'AWA': 'awa-air-astra',
+  'AY': 'ay-finnair', 'AZ': 'az-ita-airways', 'B0': 'b0-la-compagnie', 'B2': 'b2-belavia',
+  'B3': 'b3-bhutan-airlines', 'B4': 'b4-beond', 'B5': 'b5-bbn-airlines', 'B6': 'b6-jetblue-airways',
+  'B7': 'b7-uni-air', 'BA': 'ba-british-airways', 'BC': 'bc-skymark-airlines', 'BER': 'ber-fly-air41',
+  'BES': 'bes-bees-airlines', 'BF': 'bf-french-bee', 'BG': 'bg-biman', 'BI': 'bi-royal-brunei',
+  'BJ': 'bj-nouvelair', 'BJN': 'bjn-beijing-airlines', 'BJU': 'bju-aerojet-(ukraine)', 'BK': 'bk-okay-airways',
+  'BL': 'bl-pacific-airlines', 'BMA': 'bma-bermudair', 'BN': 'bn-luxwing', 'BP': 'bp-air-botswana',
+  'BQ': 'bq-sky-alps', 'BR': 'br-eva-air', 'BRH': 'brh-star-air', 'BS': 'bs-us-bangla-airlines',
+  'BT': 'bt-airbaltic', 'BU': 'bu-flycaa', 'BUF': 'buf-buff-air-services', 'BV': 'bv-toki-air',
+  'BW': 'bw-caribbean-airlines', 'BX': 'bx-air-busan', 'BY': 'by-tui-airways', 'BZ': 'bz-blue-bird-airways',
+  'C3': 'c3-trade-air', 'C5': 'c5-commuteair', 'C6': 'c6-centrum-air', 'C8': 'c8-cronos-airlines',
+  'CA': 'ca-air-china', 'CAJ': 'caj-air-caraibes-atlantique', 'CAM': 'cam-airasia-cambodia', 'CAT': 'cat*-airseven',
+  'CC': 'cc-cm-airlines', 'CCD': 'ccd-dalian-airlines', 'CD': 'cd-corendon-dutch', 'CE': 'ce-chalair',
+  'CG': 'cg-png-air', 'CI': 'ci-china-airlines', 'CJ': 'cj-ba-cityflyer', 'CL': 'cl-lufthansa-cityline',
+  'CM': 'cm-copa-airlines', 'CN': 'cn-grand-china-air', 'CNK': 'cnk-sunwest-aviation', 'CNM': 'cnm-air-china-inner-mongolia',
+  'CU': 'cu-cubana', 'CX': 'cx-cathay-pacific', 'CY': 'cy-cyprus-airways', 'CZ': 'cz-china-southern',
+  'D2': 'd2-severstal-aircompany', 'D3': 'd3-daallo-airlines', 'D7': 'd7-airasia-x', 'D8': 'd8-norwegian-air-sweden',
+  'DA': 'da-daily-air', 'DAK': 'dak-4airways', 'DB': 'db-maleth-aero', 'DD': 'dd-nok-air',
+  'DE': 'de-condor', 'DG': 'dg-cebgo', 'DI': 'di-marabu', 'DK': 'dk-sunclass-airlines',
+  'DL': 'dl-delta', 'DM': 'dm-arajet', 'DN': 'dn-dan-air', 'DO': 'do-sky-high',
+  'DP': 'dp-pobeda', 'DQ': 'dq-alexandria-airlines', 'DR': 'dr-ruili-airlines', 'DS': 'ds-easyjet-switzerland',
+  'DT': 'dt-taag-angola', 'DV': 'dv-scat-airlines', 'DX': 'dx-dat', 'DY': 'dy-norwegian',
+  'E2': 'e2-airhaifa', 'E4': 'e4-enter-air', 'E5': 'e5-air-arabia-egypt', 'E6': 'e6-eurowings-europe',
+  'E9': 'e9-iberojet', 'EAF': 'eaf-electra-airways', 'EAG': 'eag-emerald-uk', 'EAQ': 'eaq-eastern-australia',
+  'EB': 'eb-wamos-air', 'EC': 'ec-easyjet-europe', 'ED': 'ed-airexplore', 'EG': 'eg-aer-lingus-uk',
+  'EH': 'eh-ana-wings', 'EI': 'ei*-aer-lingus-regional', 'EK': 'ek-emirates', 'EN': 'en-air-dolomiti',
+  'EO': 'eo-ikar', 'EP': 'ep-iran-aseman', 'EQ': 'eq-fly-angola', 'ER': 'er-serene-air',
+  'ET': 'et-ethiopian-airlines', 'EU': 'eu-chengdu-airlines', 'EW': 'ew-eurowings', 'EX': 'ex-avianca-express',
+  'EY': 'ey-etihad-airways', 'EZ': 'ez-sun-air', 'EZZ': 'ezz-etf-airways', 'F2': 'f2-safarilink-aviation',
+  'F3': 'f3-flyadeal', 'F7': 'f7-ifly-airlines', 'F8': 'f8-flair', 'F9': 'f9-frontier-airlines',
+  'FA': 'fa*-flysafair', 'FB': 'fb-bulgaria-air', 'FC': 'fc-link-airways', 'FD': 'fd-thai-airasia',
+  'FE': 'fe-748-air-services', 'FFA': 'ffa-fly4', 'FH': 'fh-freebird-airlines', 'FHM': 'fhm-freebird-airlines-europe',
+  'FHS': 'fhs-flyjaya', 'FI': 'fi-icelandair', 'FJ': 'fj-fiji-airways', 'FJA': 'fja-fiji-link',
+  'FM': 'fm-shanghai-airlines', 'FN': 'fn-fastjet-zimbabwe', 'FNA': 'fna-norlandair', 'FO': 'fo-flybondi',
+  'FR': 'fr-ryanair', 'FRO': 'fro-frost-air', 'FS': 'fs-flyarystan', 'FSK': 'fsk-africa-charter-airline',
+  'FU': 'fu-fuzhou-airlines', 'FV': 'fv-rossiya', 'FW': 'fw*-solenta-mozambique', 'FY': 'fy-firefly',
+  'FZ': 'fz-flydubai', 'G3': 'g3-gol', 'G4': 'g4-allegiant-air', 'G5': 'g5-china-express-airlines',
+  'G7': 'g7-gojet-airlines', 'G9': 'g9-air-arabia', 'GA': 'ga-garuda', 'GD': 'gd-nexus-airlines',
+  'GE': 'ge*-lift', 'GF': 'gf-gulf-air', 'GJ': 'gj-loong-air', 'GJM': 'gjm-airhub-airlines',
+  'GK': 'gk-jetstar-japan', 'GL': 'gl-air-greenland', 'GM': 'gm-chair-airlines', 'GOA': 'goa-fly91',
+  'GQ': 'gq-sky-express', 'GR': 'gr-aurigny-air', 'GS': 'gs-tianjin-airlines', 'GT': 'gt-air-guilin',
+  'GTR': 'gtr-galistair-malta', 'GUM': 'gum-gum-air', 'GW': 'gw-getjet-airlines', 'GX': 'gx-gx-airlines',
+  'GXA': 'gxa-globalx', 'GY': 'gy-colorful-guizhou', 'GZ': 'gz-air-rarotonga', 'H2': 'h2-sky-airline',
+  'H3': 'h3-hello-jets', 'H4': 'h4-hisky-europe', 'H6': 'h6-european-air-charter', 'H7': 'h7-hisky',
+  'H8': 'h8-sky-peru', 'H9': 'h9-himalaya-airlines', 'HA': 'ha-hawaiian-airlines', 'HB': 'hb-gba',
+  'HC': 'hc-air-senegal', 'HD': 'hd-air-do', 'HF': 'hf-air-cote-d-ivoire', 'HFM': 'hfm*-global-airlines',
+  'HG': 'hg-hibernian-airlines', 'HH': 'hh-qanot-sharq', 'HJ': 'hj-humo-air', 'HK': 'hk-skippers-aviation',
+  'HM': 'hm-air-seychelles', 'HMR': 'hmr-global-reach-aviation', 'HN': 'hn-heston-airlines', 'HO': 'ho-juneyao-air',
+  'HOT': 'hot-valletta-airlines', 'HP': 'hp-populair', 'HRN': 'hrn*-travelcoup', 'HU': 'hu-hainan-airlines',
+  'HV': 'hv-transavia', 'HX': 'hx-hong-kong-airlines', 'HY': 'hy-uzbekistan-airways', 'HZ': 'hz-aurora',
+  'I2': 'i2-iberia-express', 'I5': 'i5-aix-connect', 'I8': 'i8-izhavia', 'IA': 'ia-iraqi-airways',
+  'IB': 'ib-iberia', 'ID': 'id-batik-air', 'IE': 'ie-solomon-airlines', 'IF': 'if-fly-baghdad',
+  'IFY': 'ify-i-fly-air', 'IJ': 'ij-spring-japan', 'IK': 'ik-air-kiribati', 'IL': 'il-trigana-air-service',
+  'IN': 'in-nam-air', 'IO': 'io-iraero', 'IOS': 'ios-skybus', 'IP': 'ip-pelita-air',
+  'IQ': 'iq-vietjet-qazaqstan', 'IR': 'ir-iran-air', 'IS': 'is-sepehran-airlines', 'IT': 'it-tigerair-taiwan',
+  'IU': 'iu-super-air-jet', 'IV': 'iv-gp-aviation', 'IW': 'iw-wings-air', 'IX': 'ix-air-india-express',
+  'IY': 'iy-yemenia', 'IZ': 'iz-arkia', 'IZG': 'izg-zagros-airlines', 'J2': 'j2-azal-azerbaijan',
+  'J4': 'j4-badr-airlines', 'J6': 'j6-jetsmart-colombia', 'J7': 'j7-afrijet', 'J9': 'j9-jazeera-airways',
+  'JA': 'ja-jetsmart', 'JC': 'jc-japan-air-commuter', 'JD': 'jd-capital-airlines', 'JH': 'jh-fuji-dream-airlines',
+  'JJ': 'jj-latam-brasil', 'JL': 'jl-jal', 'JM': 'jm-jambojet', 'JNK': 'jnk-jonika-airlines',
+  'JON': 'jon-jonair', 'JQ': 'jq-jetstar-airways', 'JR': 'jr-joy-air', 'JS': 'js-air-koryo',
+  'JT': 'jt-lion-air', 'JTD': 'jtd-jettime', 'JU': 'ju-air-serbia', 'JV': 'jv-perimeter-aviation',
+  'JX': 'jx-starlux', 'JY': 'jy-intercaribbean', 'JZ': 'jz-jetsmart-peru', 'K6': 'k6-air-cambodia',
+  'K7': 'k7-air-kbz', 'KAE': 'kae-kangala-air-express', 'KB': 'kb-druk-air', 'KC': 'kc-air-astana',
+  'KE': 'ke-korean-air', 'KG': 'kg-key-lime-air', 'KGN': 'kgn-asman-airlines', 'KK': 'kk-leav-aviation',
+  'KL': 'kl-klm', 'KLJ': 'klj-klasjet', 'KM': 'km-km-malta-airlines', 'KN': 'kn-china-united-airlines',
+  'KO': 'ko-komiaviatrans', 'KP': 'kp-asky-airlines', 'KQ': 'kq-kenya-airways', 'KR': 'kr-cambodia-airways',
+  'KS': 'ks-aeroitalia-regional', 'KU': 'ku-kuwait-airways', 'KX': 'kx-cayman-airways', 'KY': 'ky-kunming-airlines',
+  'L6': 'l6-mauritania-airlines', 'L8': 'l8-lulutai-airlines', 'L9': 'l9-lumiwings', 'LA': 'la-latam-airlines',
+  'LB': 'lb-bul-air', 'LBR': 'lbr-air-borealis', 'LE': 'le-air-inter-iles', 'LF': 'lf-contour-aviation',
+  'LG': 'lg-luxair', 'LH': 'lh-lufthansa', 'LIL': 'lil-fly-lili', 'LIP': 'lip-lipican-aer',
+  'LIZ': 'liz-liz-aviation', 'LJ': 'lj-jin-air', 'LM': 'lm-loganair', 'LO': 'lo-lot',
+  'LP': 'lp-latam-peru', 'LR': 'lr-avianca-costa-rica', 'LS': 'ls-jet2-com', 'LSJ': 'lsj-air-liaison',
+  'LT': 'lt-lj-air', 'LW': 'lw-lauda-europe', 'LX': 'lx-swiss', 'LY': 'ly-el-al',
+  'LZ': 'lz-legend-airlines', 'M0': 'm0-aero-mongolia', 'MD': 'md-madagascar-airlines', 'ME': 'me-mea',
+  'MF': 'mf-xiamenair', 'MG': 'mg-eznis-airways', 'MH': 'mh-malaysia-airlines', 'MJ': 'mj-myway-airlines',
+  'MK': 'mk-air-mauritius', 'ML': 'ml-sky-mali', 'MM': 'mm-peach', 'MNE': 'mne-air-montenegro',
+  'MO': 'mo-calm-air', 'MQ': 'mq-envoy-air', 'MR': 'mr-hunnu-air', 'MRJ': 'mrj-meraj-air',
+  'MS': 'ms-egyptair', 'MT': 'mt-malta-medair', 'MTL': 'mtl-raf-avia', 'MU': 'mu-china-eastern',
+  'MV': 'mv-air-mediterranean', 'MX': 'mx-breeze-airways', 'MY': 'my-airborneo', 'MZ': 'mz-amakusa-airlines',
+  'N0': 'n0-norse-atlantic', 'N2': 'n2-aero-contractors', 'N3': 'n3-volaris-el-salvador', 'N4': 'n4-nordwind',
+  'N5': 'n5-nolinor-aviation', 'N7': 'n7-norra', 'N8': 'n8-national-airlines', 'NCB': 'ncb-north-cariboo-air',
+  'NDL': 'ndl-chrono-aviation', 'NE': 'ne-nesma-airlines', 'NF': 'nf-air-vanuatu', 'NH': 'nh-ana',
+  'NI': 'ni-portugalia', 'NJS': 'njs-national-jet-systems', 'NK': 'nk-spirit-airlines', 'NM': 'nm-air-moana',
+  'NO': 'no-neos', 'NP': 'np-nile-air', 'NQ': 'nq-air-japan', 'NR': 'nr-manta-air',
+  'NS': 'ns-hebei-airlines', 'NT': 'nt-binter-canarias', 'NU': 'nu-jta', 'NUA': 'nua-united-nigeria',
+  'NWK': 'nwk-network-aviation', 'NX': 'nx-air-macau', 'NZ': 'nz-air-new-zealand', 'O8': 'o8-marathon-airlines',
+  'O9': 'o9-nova-airways', 'OA': 'oa-olympic-air', 'OB': 'ob-boa', 'OC': 'oc-oriental-air-bridge',
+  'OD': 'od-batik-air-malaysia', 'OF': 'of-overland-airways', 'OH': 'oh-psa-airlines', 'OJ': 'oj-nyxair',
+  'OL': 'ol-samoa-airways', 'OM': 'om-miat-mongolian', 'ON': 'on-nauru-airlines', 'OO': 'oo-skywest',
+  'OP': 'op-passionair', 'OQ': 'oq-chongqing-airlines', 'OR': 'or-tui-fly-nl', 'OS': 'os-austrian-airlines',
+  'OTT': 'ott-ott-airlines', 'OU': 'ou-croatia-airlines', 'OV': 'ov-salamair', 'OW': 'ow-skyward-airlines',
+  'OY': 'oy-omni-air-international', 'OZ': 'oz-asiana-airlines', 'OZW': 'ozw-virgin-australia-regional',
+  'P0': 'p0-proflight-zambia', 'P2': 'p2-airkenya-express', 'P4': 'p4-air-peace', 'P5': 'p5-wingo',
+  'P6': 'p6*-privilege-style', 'P8': 'p8-sprintair', 'PA': 'pa-airblue', 'PB': 'pb-pal-airlines',
+  'PC': 'pc-pegasus', 'PD': 'pd-porter-airlines', 'PE': 'pe-people-s', 'PEA': 'pea-pan-europeenne',
+  'PF': 'pf-air-sial', 'PG': 'pg-bangkok-airways', 'PJ': 'pj-air-saint-pierre', 'PK': 'pk-pia',
+  'PM': 'pm-canaryfly', 'PN': 'pn-west-air', 'PQ': 'pq-skyup-airlines', 'PR': 'pr-pal',
+  'PRS': 'prs-pars-air', 'PS': 'ps-ukraine-intl', 'PT': 'pt-piedmont-airlines', 'PU': 'pu-plus-ultra',
+  'PW': 'pw-precision-air', 'PX': 'px-air-niugini', 'PY': 'py-surinam-airways', 'Q2': 'q2-maldivian',
+  'Q6': 'q6-volaris-costa-rica', 'Q9': 'q9-green-africa', 'QF': 'qf-qantas', 'QG': 'qg-citilink',
+  'QH': 'qh-bamboo-airways', 'QI': 'qi-ibom-air', 'QK': 'qk-jazz-air', 'QLK': 'qlk-qantaslink',
+  'QN': 'qn-skytrans', 'QP': 'qp-akasa-air', 'QQ': 'qq-alliance-airlines', 'QR': 'qr-qatar-airways',
+  'QS': 'qs-smartwings', 'QV': 'qv-lao-airlines', 'QW': 'qw-qingdao-airlines', 'QX': 'qx-horizon-air',
+  'QZ': 'qz-indonesia-airasia', 'R3': 'r3-yakutia-airlines', 'R4': 'r4-rano-air', 'R5': 'r5-jordan-aviation',
+  'R6': 'r6-dat-lt', 'R8': 'r8-sky-fru', 'RA': 'ra-nepal-airlines', 'RAC': 'rac-rac-ryukyu-air',
+  'RC': 'rc-atlantic-airways', 'REA': 'rea-red-air', 'RER': 'rer-aeroregional', 'RF': 'rf-aero-k',
+  'RGE': 'rge-regent-airways', 'RJ': 'rj-royal-jordanian', 'RK': 'rk-ryanair-uk', 'RN': 'rn-eswatini-air',
+  'RNG': 'rng-renegade-air', 'RO': 'ro-tarom', 'RR': 'rr-buzz', 'RS': 'rs-air-seoul',
+  'RSC': 'rsc-canair', 'RT': 'rt-uvt-aero', 'RV': 'rv-air-canada-rouge', 'RW': 'rw-royal-air',
+  'RXP': 'rxp-royal-air-maroc-express', 'RY': 'ry-jiangxi-air', 'S0': 's0-aerolineas-sosa',
+  'S1': 's1-saurya-airlines', 'S4': 's4-azores-airlines', 'S5': 's5-star-air-(india)', 'S7': 's7-s7-airlines',
+  'S9': 's9-flybig', 'SA': 'sa-south-african-airways', 'SB': 'sb-aircalin', 'SC': 'sc-shandong-airlines',
+  'SEN': 'sen-senor-air', 'SET': 'set-solenta-aviation', 'SF': 'sf-tassili-airlines', 'SG': 'sg-spicejet',
+  'SHA': 'sha-shree-airlines', 'SI': 'si-blue-islands', 'SJ': 'sj-sriwijaya-air', 'SK': 'sk-sas',
+  'SL': 'sl-thai-lion-air', 'SM': 'sm-air-cairo', 'SN': 'sn-brussels-airlines', 'SND': 'snd-skytraders',
+  'SO': 'so-syphax', 'SP': 'sp-sata-air-acores', 'SQ': 'sq-singapore-airlines', 'SR': 'sr-sundair',
+  'SS': 'ss-corsair', 'SSJ': 'ssj-krasavia', 'SSQ': 'ssq-sunstate-airlines', 'ST': 'st-air-thanlwin',
+  'SU': 'su-aeroflot', 'SV': 'sv-saudia', 'SVD': 'svd-svg-air', 'SVI': 'svi-sky-vision-airlines',
+  'SVS': 'svs-sas-link', 'SY': 'sy-sun-country-airlines', 'SZ': 'sz-somon-air', 'SZS': 'szs-sas-connect',
+  'T3': 't3-eastern-airways', 'T5': 't5-turkmenistan-air', 'T6': 't6-airswift', 'T9': 't9-turpial-airlines',
+  'TA': 'ta*-tara-air', 'TB': 'tb-tui-fly-be', 'TBZ': 'tbz-ata-airlines', 'TC': 'tc-air-tanzania',
+  'TD': 'td-tbilisi-airways', 'TEZ': 'tez-tez-jet', 'TF': 'tf-bra', 'TG': 'tg-thai-airways',
+  'TGA': 'tga-tga', 'TI': 'ti-tailwind-airlines', 'TK': 'tk-turkish-airlines', 'TL': 'tl-airnorth',
+  'TM': 'tm-lam-mozambique', 'TMW': 'tmw-tma', 'TN': 'tn-air-tahiti-nui', 'TO': 'to-transavia-france',
+  'TP': 'tp-tap', 'TR': 'tr-scoot', 'TS': 'ts-air-transat', 'TT': 'tt-braathens',
+  'TU': 'tu-tunisair', 'TV': 'tv-tibet-airlines', 'TW': 'tw-t-way-air', 'TX': 'tx-air-caraibes',
+  'TY': 'ty-air-caledonie', 'U2': 'u2-easyjet-uk', 'U4': 'u4-buddha-air', 'U5': 'u5-skyup-mt',
+  'U6': 'u6-ural-airlines', 'U8': 'u8-tus-airways', 'UA': 'ua-united', 'UB': 'ub-myanmar-mna',
+  'UD': 'ud-ur-airlines', 'UF': 'uf-petroleum-air', 'UG': 'ug-tunisair-express', 'UI': 'ui-auric-air',
+  'UJ': 'uj-almasria-airlines', 'UL': 'ul-srilankan-airlines', 'UM': 'um-air-zimbabwe', 'UO': 'uo-hk-express',
+  'UP': 'up-bahamasair', 'UQ': 'uq-urumqi-air', 'UR': 'ur-uganda-airlines', 'USA': 'usa-silk-avia',
+  'USY': 'usy-usc', 'UT': 'ut-utair', 'UU': 'uu-air-austral', 'UVL': 'uvl-universal-air',
+  'UX': 'ux-air-europa', 'V0': 'v0-conviasa', 'V3': 'v3-carpatair', 'V5': 'v5-aerovias-dap',
+  'V7': 'v7-volotea', 'VA': 'va-virgin-australia', 'VAW': 'vaw-fly2sky', 'VB': 'vb-viva',
+  'VC': 'vc-sterling-airways', 'VE': 've-clic', 'VF': 'vf-ajet', 'VJ': 'vj-vietjet-air',
+  'VK': 'vk-valuejet', 'VL': 'vl-lufthansa-city', 'VN': 'vn-vietnam-airlines', 'VNE': 'vne-venezolana',
+  'VP': 'vp-flyme', 'VQ': 'vq-novoair', 'VR': 'vr-cabo-verde-airlines', 'VRH': 'vrh-varesh-airlines',
+  'VS': 'vs-virgin-atlantic', 'VT': 'vt-air-tahiti', 'VU': 'vu-vietravel-airlines', 'VY': 'vy-vueling',
+  'VZ': 'vz-thai-vietjetair', 'W3': 'w3-arik-air', 'W4': 'w4-wizz-air-malta', 'W5': 'w5-mahan-air',
+  'W6': 'w6-wizz-air', 'W8': 'w8-la-costena', 'W9': 'w9-wizz-air-uk', 'WA': 'wa-klm-cityhopper',
+  'WB': 'wb-rwandair', 'WE': 'we-parata-air', 'WF': 'wf-wideroe', 'WH': 'wh-wingo-panama',
+  'WI': 'wi-white-airways', 'WJ': 'wj-jetsmart-argentina', 'WK': 'wk-edelweiss-air', 'WL': 'wl-world-atlantic-airlines',
+  'WM': 'wm-winair', 'WN': 'wn-southwest-airlines', 'WR': 'wr-westjet-encore', 'WS': 'ws-westjet',
+  'WSG': 'wsg-wasaya-airways', 'WT': 'wt-swiftair', 'WU': 'wu-western-air', 'WV': 'wv-westair-aviation',
+  'WX': 'wx-cityjet', 'WY': 'wy-oman-air', 'WZ': 'wz-red-wings', 'X3': 'x3-tui-fly-de',
+  'X5': 'x5-air-europa-express', 'X8': 'x8-avion-express-malta', 'X9': 'x9-avion-express', 'XC': 'xc-corendon-airlines',
+  'XE': 'xe-jsx-air', 'XH': 'xh-fly-cham', 'XJ': 'xj-thai-airasia-x', 'XK': 'xk-air-corsica',
+  'XL': 'xl-latam-ecuador', 'XLE': 'xle-ng-eagle', 'XM': 'xm-j-air', 'XN': 'xn-mexicana',
+  'XP': 'xp-avelo-airlines', 'XQ': 'xq-sunexpress', 'XR': 'xr-corendon-europe', 'XUM': 'xum-sum-air',
+  'XY': 'xy-flynas', 'XZ': 'xz-aeroitalia', 'Y2': 'y2-air-century-acsa', 'Y4': 'y4-volaris',
+  'Y7': 'y7-nordstar', 'Y8': 'y8-suparna-airlines', 'YB': 'yb-harbour-air-seaplanes', 'YC': 'yc-yamal-airlines',
+  'YD': 'yd-ascend-airways', 'YI': 'yi-fly-oya', 'YK': 'yk-avia-traffic-company', 'YN': 'yn-air-creebec',
+  'YP': 'yp-air-premia', 'YQ': 'yq-tar-mexico', 'YR': 'yr-grand-canyon-airlines', 'YT': 'yt-yeti-airlines',
+  'YU': 'yu-euroatlantic-airways', 'YV': 'yv-mesa-airlines', 'YW': 'yw-air-nostrum', 'YX': 'yx-republic-airways',
+  'Z0': 'z0-norse-atlantic-uk', 'Z2': 'z2-philippines-airasia', 'Z9': 'z9-myairline', 'ZA': 'za-sky-angkor-airlines',
+  'ZD': 'zd-ewa-air', 'ZE': 'ze-eastar-jet', 'ZF': 'zf-azur-air', 'ZG': 'zg-zipair',
+  'ZH': 'zh-shenzhen-airlines', 'ZL': 'zl-rex-airlines', 'ZN': 'zn-zambia-airways', 'ZP': 'zp-paranair',
+  'ZQ': 'zq-german-airways', 'ZT': 'zt-titan-airways', 'ZV': 'zv-aerus', 'ZW': 'zw-air-wisconsin',
+}
+
+function seatMapUrl(flightNumber: string, aircraftName?: string): string {
+  // IATA airline codes are exactly 2 chars — must not use {2,3} which greedily eats a digit
+  const iata = (flightNumber ?? '').replace(/\s+/g, '').toUpperCase().match(/^([A-Z0-9]{2})/)?.[1] ?? ''
+  const airlineSlug = SEATMAPS_SLUG[iata]
+  if (!airlineSlug) return 'https://seatmaps.com/airlines/'
+  const base = `https://seatmaps.com/airlines/${airlineSlug}/`
+  if (!aircraftName) return base
+  const acKey = shortAircraft(aircraftName) || aircraftName.trim().toUpperCase()
+  const acSlug = AIRCRAFT_SLUG[acKey]
+  return acSlug ? `${base}${acSlug}/` : base
 }
 
 const TRIP_PAGE = 5
@@ -126,24 +397,26 @@ function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<
 
       {/* AI analysis */}
       {rec && (
-        <div className="flex flex-wrap items-start gap-3">
-          <div className="flex-1 min-w-0 space-y-1">
+        <div className="space-y-2">
+          <div className="space-y-0.5">
             <p className="text-sm font-semibold text-white/80">{rec.headline}</p>
             <p className="text-xs text-white/45 leading-relaxed">{rec.explanation}</p>
           </div>
-          <div className="flex flex-wrap gap-1.5 shrink-0">
-            {rec.flags.map((flag, i) => (
-              <div key={i} className={`flex gap-1 text-xs px-2.5 py-1 rounded-lg border ${FLAG_STYLE[flag.type] ?? 'bg-white/5 text-white/40 border-white/10'}`}>
-                <span className="font-bold shrink-0">{FLAG_ICON[flag.type] ?? '•'}</span>
-                <span>{flag.message}</span>
-              </div>
-            ))}
-            {rec.cppGbp != null && (
-              <span className="text-xs text-white/25 self-end">
-                {(rec.cppGbp * 100).toFixed(1)}p/pt{rec.estimatedCashValueGbp != null && ` · ≈ £${rec.estimatedCashValueGbp.toLocaleString()}`}
-              </span>
-            )}
-          </div>
+          {(rec.flags.length > 0 || rec.cppGbp != null) && (
+            <div className="flex flex-wrap gap-1.5">
+              {rec.flags.map((flag, i) => (
+                <div key={i} className={`flex gap-1 w-fit max-w-full text-xs px-2.5 py-1 rounded-lg border ${FLAG_STYLE[flag.type] ?? 'bg-white/5 text-white/40 border-white/10'}`}>
+                  <span className="font-bold shrink-0">{FLAG_ICON[flag.type] ?? '•'}</span>
+                  <span className="break-words">{flag.message}</span>
+                </div>
+              ))}
+              {rec.cppGbp != null && (
+                <span className="text-xs text-white/25 self-center">
+                  {(rec.cppGbp * 100).toFixed(1)}p/pt{rec.estimatedCashValueGbp != null && ` · ≈ £${rec.estimatedCashValueGbp.toLocaleString()}`}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -218,7 +491,14 @@ function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<
                               <div className="text-[11px] text-white/35">{fmtTime(seg.DepartsAt)}</div>
                             </div>
                             <div className="flex-1 flex flex-col items-center gap-0.5 min-w-0 px-1">
-                              <span className="text-[10px] text-white/20">{fmtDuration(seg.Duration)}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-white/20">{fmtDuration(seg.Duration)}</span>
+                                {seg.AircraftName && (
+                                  <span className="text-[10px] font-semibold text-white/35 bg-white/5 px-1 rounded">
+                                    {shortAircraft(seg.AircraftName)}
+                                  </span>
+                                )}
+                              </div>
                               <div className="w-full border-t border-white/10" />
                             </div>
                             <div className="shrink-0 text-center w-12">
@@ -226,10 +506,15 @@ function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<
                               <div className="text-[11px] text-white/35">{fmtTime(seg.ArrivesAt)}</div>
                             </div>
                           </div>
-                          {seg.AircraftName && (
-                            <span className="text-[11px] text-white/20 shrink-0 hidden md:block truncate max-w-[120px]">{seg.AircraftName}</span>
-                          )}
                           <span className="text-[10px] text-white/20 shrink-0 uppercase">{seg.Cabin}</span>
+                          <a
+                            href={seatMapUrl(seg.FlightNumber, seg.AircraftName)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 text-xs font-semibold text-violet-400 hover:text-violet-300 bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 px-2.5 py-1 rounded-lg no-underline transition"
+                          >
+                            Seat map
+                          </a>
                         </div>
                       </div>
                     )
@@ -320,13 +605,14 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
     } else if (filters.sort === 'taxesCashGbp') {
       cmp = (a.taxesCashGbp ?? 9999) - (b.taxesCashGbp ?? 9999)
     } else {
-      // pointsCost: secondary sort by verdict
+      // pointsCost: secondary sort by verdict, then points, then direct first
       const verdictOrder = { recommended: 0, consider: 1, avoid: 2 }
       const av = a.recommendation?.verdict, bv = b.recommendation?.verdict
       if (av !== bv) {
         cmp = (verdictOrder[av as keyof typeof verdictOrder] ?? 3) - (verdictOrder[bv as keyof typeof verdictOrder] ?? 3)
       } else {
-        cmp = a.pointsCost - b.pointsCost
+        const pointsDiff = a.pointsCost - b.pointsCost
+        cmp = pointsDiff !== 0 ? pointsDiff : a.stops - b.stops
       }
     }
     return filters.sortDir === 'desc' ? -cmp : cmp

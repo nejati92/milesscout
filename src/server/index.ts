@@ -30,6 +30,46 @@ await server.register(fastifyTRPCPlugin, {
 
 server.get('/health', async () => ({ ok: true }))
 
+// Voice transcription — needs GROQ_API_KEY (free) or OPENAI_API_KEY
+server.post('/api/transcribe', {
+  bodyLimit: 4 * 1024 * 1024,
+}, async (req, reply) => {
+  const groqKey = process.env.GROQ_API_KEY
+  const openaiKey = process.env.OPENAI_API_KEY
+  const apiKey = groqKey ?? openaiKey
+  if (!apiKey) return reply.code(503).send({ error: 'transcription_not_configured' })
+
+  const baseUrl = groqKey
+    ? 'https://api.groq.com/openai/v1/audio/transcriptions'
+    : 'https://api.openai.com/v1/audio/transcriptions'
+  const model = groqKey ? 'whisper-large-v3-turbo' : 'whisper-1'
+  console.log('model', model)
+  const { audio, mimeType = 'audio/webm' } = req.body as { audio: string; mimeType?: string }
+  if (!audio) return reply.code(400).send({ error: 'missing_audio' })
+
+  const buffer = Buffer.from(audio, 'base64')
+  const ext = mimeType.split('/')[1]?.split(';')[0] ?? 'webm'
+
+  const form = new FormData()
+  form.append('file', new Blob([buffer], { type: mimeType }), `audio.${ext}`)
+  form.append('model', model)
+  form.append('language', 'en')
+
+  const resp = await fetch(baseUrl, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form,
+  })
+
+  if (!resp.ok) {
+    server.log.error(`[transcribe] ${resp.status} ${await resp.text()}`)
+    return reply.code(500).send({ error: 'transcription_failed' })
+  }
+
+  const json = await resp.json() as { text: string }
+  return { transcript: json.text?.trim() ?? '' }
+})
+
 if (process.env.NODE_ENV === 'production') {
   await server.register(fastifyStatic, {
     root: path.join(__dirname, '../../dist/client'),
