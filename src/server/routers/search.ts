@@ -67,11 +67,11 @@ export const searchRouter = router({
     .input(z.object({
       question: z.string().min(1),
       context: z.object({
-        query: z.string(),
-        advice: z.string(),
-        parsed: ParsedQuery,
-        rawResults: z.array(AvailabilityResult),
-        recommendations: z.array(Recommendation),
+        query: z.string().optional(),
+        advice: z.string().optional(),
+        parsed: ParsedQuery.optional(),
+        rawResults: z.array(AvailabilityResult).optional(),
+        recommendations: z.array(Recommendation).optional(),
         activeFilters: z.string().optional(),
       }),
       history: z.array(z.object({
@@ -120,6 +120,29 @@ export const searchRouter = router({
       const others = bookingLinks.filter((b) => b !== relevant)
 
       return { trips: trips.length ? trips : all, relevant, others }
+    }),
+
+  seatmapImage: publicProcedure
+    .input(z.object({ url: z.string().url() }))
+    .output(z.object({ imageUrl: z.string(), pageUrl: z.string() }).nullable())
+    .query(async ({ input }) => {
+      try {
+        const res = await fetch(input.url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MileScout/1.0)' },
+          signal: AbortSignal.timeout(6000),
+        })
+        if (!res.ok) return null
+        const html = await res.text()
+        // Extract first webp screenshot — format: /img/screenshots/seatmaps/{hash}.webp
+        const m = html.match(/\/img\/screenshots\/seatmaps\/([a-f0-9]{32})\.webp/)
+        if (!m) return null
+        return {
+          imageUrl: `https://seatmaps.com/img/screenshots/seatmaps/${m[1]}.webp`,
+          pageUrl: input.url,
+        }
+      } catch {
+        return null
+      }
     }),
 
   programs: publicProcedure

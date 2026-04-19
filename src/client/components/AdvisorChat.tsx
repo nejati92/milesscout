@@ -66,7 +66,7 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
 
   async function send() {
     const question = input.trim()
-    if (!question || ask.isPending || !searchData) return
+    if (!question || ask.isPending) return
     setInput('')
 
     const userMsg: ChatMessage = { role: 'user', content: question }
@@ -76,14 +76,14 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
 
     const result = await ask.mutateAsync({
       question,
-      context: {
+      context: searchData ? {
         query: originalQuery,
         advice: searchData.advice,
         parsed: searchData.parsed,
         rawResults: searchData.rawResults,
         recommendations: searchData.recommendations,
         activeFilters: activeFiltersSummary(),
-      },
+      } : {},
       history,
     })
 
@@ -141,7 +141,7 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
 
   const placeholder = searchData
     ? 'Filter, sort, ask about fees, or start a new search…'
-    : 'Ask about award travel…'
+    : 'Ask anything — transfers, sweet spots, how programs work…'
 
   return (
     <div className="bg-white/[0.03] border border-white/8 rounded-2xl overflow-hidden">
@@ -250,7 +250,7 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
               <button
                 type="button"
                 onClick={voice.start}
-                disabled={ask.isPending || isRefreshing}
+                disabled={ask.isPending}
                 className={`flex items-center justify-center w-7 h-7 rounded-lg transition cursor-pointer shrink-0 disabled:opacity-40 ${voice.error ? 'text-amber-400/70' : 'text-white/25 hover:text-white/55 hover:bg-white/8'}`}
                 title={voice.error ?? 'Voice input'}
               >
@@ -264,12 +264,12 @@ export function AdvisorChat({ searchData, isRefreshing, originalQuery, filters, 
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') send() }}
               placeholder={placeholder}
-              disabled={ask.isPending || isRefreshing}
+              disabled={ask.isPending}
               className="flex-1 bg-transparent text-sm text-white placeholder:text-white/20 outline-none disabled:opacity-50 min-w-0"
             />
             <button
               onClick={send}
-              disabled={!input.trim() || ask.isPending || !searchData || isRefreshing}
+              disabled={!input.trim() || ask.isPending}
               className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 disabled:text-white/15 transition cursor-pointer disabled:cursor-not-allowed shrink-0"
             >
               {ask.isPending ? '…' : 'Ask →'}

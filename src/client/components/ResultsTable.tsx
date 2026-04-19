@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect, useCallback, Fragment } from 'react'
+import { useMemo, useState, useEffect, useCallback, Fragment, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { AvailabilityResult, Recommendation } from '../../shared/types'
 import { getBookingUrl } from '../utils/bookingLinks'
 import { trpc } from '../trpc'
@@ -345,6 +346,83 @@ function seatMapUrl(flightNumber: string, aircraftName?: string): string {
   return acSlug ? `${base}${acSlug}/` : base
 }
 
+function SeatMapButton({ flightNumber, aircraftName }: { flightNumber: string; aircraftName?: string }) {
+  const [open, setOpen] = useState(false)
+  const url = seatMapUrl(flightNumber, aircraftName)
+  const query = trpc.search.seatmapImage.useQuery({ url }, { enabled: open, staleTime: Infinity })
+
+  // Lock body scroll and handle Escape
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  if (url === 'https://seatmaps.com/airlines/') return null
+
+  const modal = open ? createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
+    >
+      <div className="bg-[#12121e] border border-white/10 rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/8 shrink-0">
+          <span className="text-sm font-semibold text-white/70">Seat Map</span>
+          <button onClick={() => setOpen(false)} className="text-white/30 hover:text-white/70 text-xl leading-none cursor-pointer transition">×</button>
+        </div>
+
+        {query.isLoading && (
+          <div className="flex items-center justify-center h-64 text-white/30 text-sm">Loading seat map…</div>
+        )}
+
+        {query.data && (
+          <>
+            <div className="overflow-y-auto flex-1 overscroll-contain">
+              <a href={query.data.pageUrl} target="_blank" rel="noopener noreferrer" className="block">
+                <img src={query.data.imageUrl} alt="Seat map" className="w-full object-contain" loading="lazy" />
+              </a>
+            </div>
+            <div className="px-5 py-3 flex items-center justify-between border-t border-white/8 shrink-0">
+              <span className="text-xs text-white/25">Provided by seatmaps.com</span>
+              <a href={query.data.pageUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-violet-400 hover:text-violet-300 transition">
+                Open full map →
+              </a>
+            </div>
+          </>
+        )}
+
+        {!query.isLoading && !query.data && (
+          <div className="flex flex-col items-center justify-center gap-3 h-48">
+            <p className="text-sm text-white/40">No seat map preview available.</p>
+            <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-violet-400 hover:text-violet-300 transition">
+              Open on seatmaps.com →
+            </a>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  ) : null
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="shrink-0 text-xs font-semibold text-violet-400 hover:text-violet-300 bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 px-2.5 py-1 rounded-lg transition cursor-pointer"
+      >
+        Seat map
+      </button>
+      {modal}
+    </>
+  )
+}
+
 const TRIP_PAGE = 5
 
 function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<typeof result['recommendation']> }) {
@@ -507,14 +585,7 @@ function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<
                             </div>
                           </div>
                           <span className="text-[10px] text-white/20 shrink-0 uppercase">{seg.Cabin}</span>
-                          <a
-                            href={seatMapUrl(seg.FlightNumber, seg.AircraftName)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="shrink-0 text-xs font-semibold text-violet-400 hover:text-violet-300 bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 px-2.5 py-1 rounded-lg no-underline transition"
-                          >
-                            Seat map
-                          </a>
+                          <SeatMapButton flightNumber={seg.FlightNumber} aircraftName={seg.AircraftName} />
                         </div>
                       </div>
                     )
