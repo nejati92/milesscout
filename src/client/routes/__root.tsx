@@ -1,5 +1,6 @@
 import { createRootRoute, Outlet, Link } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
+import { SignInButton, SignUpButton, UserButton, useAuth } from '@clerk/clerk-react'
 
 function SunIcon() {
   return (
@@ -18,6 +19,38 @@ function MoonIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
     </svg>
+  )
+}
+
+function AuthButtons() {
+  const { isSignedIn, isLoaded } = useAuth()
+  if (!isLoaded) return null
+  if (isSignedIn) {
+    return (
+      <UserButton
+        appearance={{
+          elements: {
+            avatarBox: 'w-7 h-7',
+          },
+        }}
+      />
+    )
+  }
+  return (
+    <div className="flex items-center gap-1">
+      <SignInButton mode="modal">
+        <button className="text-xs text-white/50 hover:text-white/90 px-3 py-1.5 rounded-lg transition cursor-pointer font-semibold"
+          style={{ background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)' }}>
+          Sign in
+        </button>
+      </SignInButton>
+      <SignUpButton mode="modal">
+        <button className="text-xs text-white font-bold px-3 py-1.5 rounded-lg transition cursor-pointer"
+          style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+          Sign up
+        </button>
+      </SignUpButton>
+    </div>
   )
 }
 
@@ -58,6 +91,7 @@ export const Route = createRootRoute({
           </Link>
           <div className="flex items-center gap-2">
             <span className="text-white/25 text-xs hidden sm:block mr-2">Award flight intelligence</span>
+            <AuthButtons />
             <ThemeToggle />
           </div>
         </div>

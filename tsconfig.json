@@ -16,7 +16,8 @@
     "noUnusedParameters": true,
     "paths": {
       "@shared/*": ["./src/shared/*"]
-    }
+    },
+    "types": ["vite/client"]
   },
   "include": ["src/client", "src/shared"]
 }
