@@ -65,6 +65,7 @@ export const Recommendation = z.object({
 export const SearchResponse = z.object({
   parsed: ParsedQuery,
   rawResults: z.array(AvailabilityResult),
+  inboundResults: z.array(AvailabilityResult).optional(),
   cacheHit: z.boolean(),
 })
 

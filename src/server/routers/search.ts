@@ -25,16 +25,33 @@ export const searchRouter = router({
         return { parsed, rawResults: [], cacheHit: false }
       }
 
-      const { results: rawResults, cacheHit } = await searchAvailability({
-        origins: parsed.originAirports,
-        destinations: parsed.destinationAirports,
-        startDate: parsed.departureDateFrom,
-        endDate: parsed.departureDateTo,
-        cabin: parsed.cabin,
-        programs: parsed.programsToSearch,
-      })
+      const isReturn = !!(parsed.returnDateFrom && parsed.returnDateTo)
 
-      return { parsed, rawResults, cacheHit }
+      const [outbound, inbound] = await Promise.all([
+        searchAvailability({
+          origins: parsed.originAirports,
+          destinations: parsed.destinationAirports,
+          startDate: parsed.departureDateFrom,
+          endDate: parsed.departureDateTo,
+          cabin: parsed.cabin,
+          programs: parsed.programsToSearch,
+        }),
+        isReturn ? searchAvailability({
+          origins: parsed.destinationAirports,
+          destinations: parsed.originAirports,
+          startDate: parsed.returnDateFrom!,
+          endDate: parsed.returnDateTo!,
+          cabin: parsed.cabin,
+          programs: parsed.programsToSearch,
+        }) : Promise.resolve(null),
+      ])
+
+      return {
+        parsed,
+        rawResults: outbound.results,
+        inboundResults: inbound?.results,
+        cacheHit: outbound.cacheHit,
+      }
     }),
 
   reason: publicProcedure

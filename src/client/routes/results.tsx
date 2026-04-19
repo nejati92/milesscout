@@ -21,49 +21,66 @@ function ResultsPage() {
   const pointsBalances = points ? (JSON.parse(points) as Record<string, number>) : undefined
   const search = trpc.search.search.useMutation()
   const reason = trpc.search.reason.useMutation()
+  const reasonInbound = trpc.search.reason.useMutation()
 
-  // Keep last successful results so the UI never flashes back to the loading spinner
   const lastSearchData = useRef(search.data)
   if (search.data) lastSearchData.current = search.data
   const searchData = search.data ?? lastSearchData.current
 
   const lastReasonData = useRef(reason.data)
   if (reason.data) lastReasonData.current = reason.data
-  // Reset reason data when a new search starts
   const reasonData = search.isPending ? undefined : (reason.data ?? lastReasonData.current)
 
+  const lastReasonInboundData = useRef(reasonInbound.data)
+  if (reasonInbound.data) lastReasonInboundData.current = reasonInbound.data
+  const reasonInboundData = search.isPending ? undefined : (reasonInbound.data ?? lastReasonInboundData.current)
+
   const [tableFilters, setTableFilters] = useState<TableFilters>(DEFAULT_FILTERS)
+  const [inboundFilters, setInboundFilters] = useState<TableFilters>(DEFAULT_FILTERS)
+  const [activeTab, setActiveTab] = useState<'outbound' | 'inbound'>('outbound')
   const [currentQuery, setCurrentQuery] = useState(q)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+
+  const isReturn = !!(searchData?.inboundResults)
 
   useEffect(() => {
     if (q) {
       lastReasonData.current = undefined
+      lastReasonInboundData.current = undefined
+      setActiveTab('outbound')
       search.mutate({ text: q, pointsBalances }, {
         onSuccess(result) {
           if (result.rawResults.length > 0) {
-            reason.mutate({
-              parsed: result.parsed,
-              rawResults: result.rawResults,
-              pointsBalances,
-            })
+            reason.mutate({ parsed: result.parsed, rawResults: result.rawResults, pointsBalances })
+          }
+          if (result.inboundResults && result.inboundResults.length > 0) {
+            reasonInbound.mutate({ parsed: result.parsed, rawResults: result.inboundResults, pointsBalances })
           }
         },
       })
       setCurrentQuery(q)
       setTableFilters(DEFAULT_FILTERS)
+      setInboundFilters(DEFAULT_FILTERS)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, points])
 
   function handleNewSearch(newQuery: string) {
     setTableFilters(DEFAULT_FILTERS)
+    setInboundFilters(DEFAULT_FILTERS)
     setCurrentQuery(newQuery)
     navigate({ to: '/results', search: { q: newQuery, ...(points ? { points } : {}) } })
   }
 
   const isFirstLoad = search.isPending && !searchData
-  const isReasoning = !search.isPending && !!searchData && reason.isPending
+  const isReasoning = !search.isPending && !!searchData && (reason.isPending || (isReturn && reasonInbound.isPending))
+
+  const activeResults = activeTab === 'inbound' ? (searchData?.inboundResults ?? []) : (searchData?.rawResults ?? [])
+  const activeReasonData = activeTab === 'inbound' ? reasonInboundData : reasonData
+  const activeFilters = activeTab === 'inbound' ? inboundFilters : tableFilters
+  const setActiveFilters = activeTab === 'inbound' ? setInboundFilters : setTableFilters
+
+  const chatSearchData = reasonData ? { ...searchData!, ...reasonData } : null
 
   return (
     <div className="min-h-[calc(100vh-3rem)] flex flex-col">
@@ -93,7 +110,6 @@ function ResultsPage() {
 
       <div className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-8">
 
-        {/* First-load spinner — only when no data yet */}
         {isFirstLoad && (
           <div className="flex flex-col items-center justify-center py-32 gap-6">
             <div className="relative w-16 h-16">
@@ -108,7 +124,6 @@ function ResultsPage() {
           </div>
         )}
 
-        {/* Error */}
         {search.isError && (
           <div className="flex flex-col items-center py-24 gap-4">
             <div className="text-4xl">⚠</div>
@@ -117,10 +132,9 @@ function ResultsPage() {
           </div>
         )}
 
-        {/* Chat — always visible once we have data, stays mounted across new searches */}
         {searchData && (
           <AdvisorChat
-            searchData={reasonData ? { ...searchData, ...reasonData } : null}
+            searchData={chatSearchData}
             isRefreshing={search.isPending && !!searchData}
             originalQuery={currentQuery}
             filters={tableFilters}
@@ -131,20 +145,25 @@ function ResultsPage() {
           />
         )}
 
-        {/* Results */}
         {searchData && !isFirstLoad && (
           <>
-            {/* Parsed pill */}
+            {/* Route pill */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-white font-bold font-mono text-lg">
                 {searchData.parsed.originAirports.join(' / ')}
               </span>
-              <span className="text-white/20 text-lg">→</span>
+              <span className="text-white/20 text-lg">{isReturn ? '⇄' : '→'}</span>
               <span className="text-white font-bold font-mono text-lg">
                 {searchData.parsed.destinationAirports.join(' / ')}
               </span>
               <span className="text-white/20 mx-1">·</span>
               <span className="text-white/50 text-sm">{searchData.parsed.departureDateFrom} – {searchData.parsed.departureDateTo}</span>
+              {isReturn && searchData.parsed.returnDateFrom && (
+                <>
+                  <span className="text-white/20">·</span>
+                  <span className="text-white/50 text-sm">return {searchData.parsed.returnDateFrom} – {searchData.parsed.returnDateTo}</span>
+                </>
+              )}
               <span className="text-white/20">·</span>
               <span className="text-white/50 text-sm capitalize">{searchData.parsed.cabin}</span>
               {searchData.parsed.exclusions.map((ex) => (
@@ -159,7 +178,6 @@ function ResultsPage() {
               ))}
             </div>
 
-            {/* Clarification */}
             {searchData.parsed.parseConfidence === 'low' && searchData.parsed.clarificationNeeded && (
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-sm text-amber-300">
                 <p className="font-semibold mb-1">Could you clarify?</p>
@@ -167,29 +185,57 @@ function ResultsPage() {
               </div>
             )}
 
-            {/* No results */}
-            {searchData.rawResults.length === 0 && !searchData.parsed.clarificationNeeded && (
+            {/* Tabs — only for return searches */}
+            {isReturn && (
+              <div className="flex gap-1 bg-white/[0.03] border border-white/8 rounded-xl p-1 w-fit">
+                <button
+                  onClick={() => setActiveTab('outbound')}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition cursor-pointer ${
+                    activeTab === 'outbound'
+                      ? 'bg-indigo-600 text-white shadow'
+                      : 'text-white/40 hover:text-white/70'
+                  }`}
+                >
+                  ↗ Outbound
+                  <span className="ml-2 text-xs opacity-60">{searchData.rawResults.length}</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('inbound')}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition cursor-pointer ${
+                    activeTab === 'inbound'
+                      ? 'bg-indigo-600 text-white shadow'
+                      : 'text-white/40 hover:text-white/70'
+                  }`}
+                >
+                  ↙ Return
+                  {reasonInbound.isPending
+                    ? <span className="ml-2 text-xs opacity-60 animate-pulse">…</span>
+                    : <span className="ml-2 text-xs opacity-60">{searchData.inboundResults?.length ?? 0}</span>
+                  }
+                </button>
+              </div>
+            )}
+
+            {activeResults.length === 0 && !searchData.parsed.clarificationNeeded && (
               <div className="flex flex-col items-center py-20 gap-3">
                 <p className="text-white/40 font-semibold">No award availability found</p>
                 <p className="text-white/20 text-sm">Try different dates, more programs, or alternative airports</p>
               </div>
             )}
 
-            {/* Strategic advice — shown above table, hidden until data arrives */}
-            {searchData.rawResults.length > 0 && reasonData?.advice && (
+            {activeResults.length > 0 && activeReasonData?.advice && (
               <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5">
                 <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-3">Strategic Advice</p>
-                <p className="text-sm text-white/50 leading-relaxed">{reasonData.advice}</p>
+                <p className="text-sm text-white/50 leading-relaxed">{activeReasonData.advice}</p>
               </div>
             )}
 
-            {/* Results table */}
-            {searchData.rawResults.length > 0 && (
+            {activeResults.length > 0 && (
               <ResultsTable
-                results={searchData.rawResults}
-                recommendations={reasonData?.recommendations}
-                filters={tableFilters}
-                onFiltersChange={setTableFilters}
+                results={activeResults}
+                recommendations={activeReasonData?.recommendations}
+                filters={activeFilters}
+                onFiltersChange={setActiveFilters}
               />
             )}
           </>
