@@ -561,7 +561,37 @@ function ExpandedRow({ result, rec }: { result: EnrichedResult; rec: ReturnType<
                             <span className="text-xs text-amber-400/50">⏱ Layover in {prev!.DestinationAirport} — {fmtDuration(layoverMins)}</span>
                           </div>
                         )}
-                        <div className="flex items-center gap-3 px-4 py-3">
+                        {/* Mobile layout: two rows */}
+                        <div className="sm:hidden px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono font-bold text-indigo-300/80 w-12 shrink-0">{seg.FlightNumber}</span>
+                            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                              <div className="shrink-0 text-center">
+                                <div className="text-sm font-mono font-bold text-white">{seg.OriginAirport}</div>
+                                <div className="text-[11px] text-white/35">{fmtTime(seg.DepartsAt)}</div>
+                              </div>
+                              <div className="flex-1 flex flex-col items-center gap-0.5 min-w-0 px-1">
+                                <span className="text-[10px] text-white/20">{fmtDuration(seg.Duration)}</span>
+                                <div className="w-full border-t border-white/10" />
+                              </div>
+                              <div className="shrink-0 text-center">
+                                <div className="text-sm font-mono font-bold text-white">{seg.DestinationAirport}</div>
+                                <div className="text-[11px] text-white/35">{fmtTime(seg.ArrivesAt)}</div>
+                              </div>
+                            </div>
+                            <SeatMapButton flightNumber={seg.FlightNumber} aircraftName={seg.AircraftName} />
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 pl-14">
+                            {seg.AircraftName && (
+                              <span className="text-[10px] font-semibold text-white/30 bg-white/5 px-1.5 py-0.5 rounded">
+                                {shortAircraft(seg.AircraftName)}
+                              </span>
+                            )}
+                            <span className="text-[10px] text-white/20 uppercase">{seg.Cabin}</span>
+                          </div>
+                        </div>
+                        {/* Desktop layout: original single row */}
+                        <div className="hidden sm:flex items-center gap-3 px-4 py-3">
                           <span className="text-xs font-mono font-bold text-indigo-300/80 w-14 shrink-0">{seg.FlightNumber}</span>
                           <div className="flex items-center gap-1.5 flex-1 min-w-0">
                             <div className="shrink-0 text-center w-12">

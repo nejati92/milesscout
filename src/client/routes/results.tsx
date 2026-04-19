@@ -226,10 +226,25 @@ function ResultsPage() {
               </div>
             )}
 
-            {activeResults.length === 0 && !searchData.parsed.clarificationNeeded && (
-              <div className="flex flex-col items-center py-20 gap-3">
-                <p className="text-white/40 font-semibold">No award availability found</p>
-                <p className="text-white/20 text-sm">Try different dates, more programs, or alternative airports</p>
+            {activeResults.length === 0 && !search.isPending && (
+              <div className="flex flex-col items-center py-16 px-6 gap-5 rounded-2xl text-center"
+                style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--card-shadow)' }}>
+                <div className="w-14 h-14 rounded-full flex items-center justify-center text-3xl font-bold"
+                  style={{ background: 'var(--filter-inactive-bg)', color: 'var(--filter-inactive-text)' }}>
+                  ✗
+                </div>
+                <div>
+                  <p className="font-bold text-lg mb-2" style={{ color: 'var(--filter-active-text)', background: 'none' }}>Search complete — no availability found</p>
+                  <p className="text-sm max-w-sm mx-auto leading-relaxed" style={{ color: 'var(--filter-inactive-text)' }}>
+                    We checked all programs for these dates and routes and found nothing. Try widening your date range, adding more programs, or using nearby airports.
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate({ to: '/' })}
+                  className="text-sm font-bold px-6 py-2.5 rounded-xl text-white transition cursor-pointer"
+                  style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 4px 16px rgba(99,102,241,0.35)' }}>
+                  Try a new search →
+                </button>
               </div>
             )}
 

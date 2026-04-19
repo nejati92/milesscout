@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useAuth, SignInButton, SignUpButton } from '@clerk/clerk-react'
+import { useAuth, SignInButton } from '@clerk/clerk-react'
 import { DemoAnimation } from '../components/DemoAnimation'
 import { PointsContext } from '../components/PointsContext'
 import { useVoice } from '../hooks/useVoice'
@@ -61,16 +61,10 @@ function LandingPage() {
 
         {/* CTAs */}
         <div className="flex items-center gap-3">
-          <SignUpButton mode="modal">
+          <SignInButton mode="modal">
             <button className="text-sm font-bold px-8 py-3 rounded-xl text-white transition cursor-pointer"
               style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 4px 20px rgba(99,102,241,0.4)' }}>
-              Get started free →
-            </button>
-          </SignUpButton>
-          <SignInButton mode="modal">
-            <button className="text-sm font-semibold px-6 py-3 rounded-xl transition cursor-pointer"
-              style={{ background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
-              Sign in
+              Sign in →
             </button>
           </SignInButton>
         </div>

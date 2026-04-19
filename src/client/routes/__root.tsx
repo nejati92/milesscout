@@ -1,6 +1,6 @@
 import { createRootRoute, Outlet, Link } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
-import { SignInButton, SignUpButton, UserButton, useAuth } from '@clerk/clerk-react'
+import { SignInButton, UserButton, useAuth } from '@clerk/clerk-react'
 
 function SunIcon() {
   return (
@@ -37,20 +37,12 @@ function AuthButtons() {
     )
   }
   return (
-    <div className="flex items-center gap-1">
-      <SignInButton mode="modal">
-        <button className="text-xs text-white/50 hover:text-white/90 px-3 py-1.5 rounded-lg transition cursor-pointer font-semibold"
-          style={{ background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)' }}>
-          Sign in
-        </button>
-      </SignInButton>
-      <SignUpButton mode="modal">
-        <button className="text-xs text-white font-bold px-3 py-1.5 rounded-lg transition cursor-pointer"
-          style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-          Sign up
-        </button>
-      </SignUpButton>
-    </div>
+    <SignInButton mode="modal">
+      <button className="text-xs text-white/50 hover:text-white/90 px-3 py-1.5 rounded-lg transition cursor-pointer font-semibold"
+        style={{ background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)' }}>
+        Sign in
+      </button>
+    </SignInButton>
   )
 }
 
