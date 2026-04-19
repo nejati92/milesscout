@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useEffect, useRef, useState } from 'react'
+import { useAuth } from '@clerk/clerk-react'
 import { trpc } from '../trpc'
 import { ResultsTable, DEFAULT_FILTERS, type TableFilters } from '../components/ResultsTable'
 import { AdvisorChat, type ChatMessage } from '../components/AdvisorChat'
@@ -16,8 +17,21 @@ export const Route = createFileRoute('/results')({
 })
 
 function ResultsPage() {
+  const { isSignedIn, isLoaded } = useAuth()
   const { q, points } = Route.useSearch()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) navigate({ to: '/' })
+  }, [isLoaded, isSignedIn, navigate])
+
+  if (!isLoaded || !isSignedIn) {
+    return (
+      <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-indigo-500/40 border-t-indigo-400 animate-spin" />
+      </div>
+    )
+  }
   const pointsBalances = points ? (JSON.parse(points) as Record<string, number>) : undefined
   const search = trpc.search.search.useMutation()
   const reason = trpc.search.reason.useMutation()

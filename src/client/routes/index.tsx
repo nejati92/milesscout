@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { useAuth, SignInButton, SignUpButton } from '@clerk/clerk-react'
+import { DemoAnimation } from '../components/DemoAnimation'
 import { PointsContext } from '../components/PointsContext'
 import { useVoice } from '../hooks/useVoice'
 import { WaveformVisualizer } from '../components/WaveformVisualizer'
@@ -25,7 +27,69 @@ const EXAMPLES = [
   'First class Singapore, 150k Virgin points',
 ]
 
-function HomePage() {
+function LandingPage() {
+  return (
+    <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center px-4 py-16">
+      <div className="w-full max-w-3xl flex flex-col items-center">
+
+        {/* Badge */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-white/50"
+            style={{ background: 'var(--card-bg)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--card-border)' }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Real-time award availability · AI-powered reasoning
+          </div>
+        </div>
+
+        {/* Heading */}
+        <h1 className="text-5xl sm:text-6xl font-black text-center text-white tracking-tight leading-[1.08] mb-4">
+          Find your best
+          <br />
+          <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+            award flight
+          </span>
+        </h1>
+        <p className="text-white/40 text-center text-base mb-10 max-w-md mx-auto leading-relaxed">
+          Describe your trip in plain English. MileScout searches real availability across every major points program and tells you exactly what to book.
+        </p>
+
+        {/* Animated demo */}
+        <div className="w-full mb-10 overflow-hidden"
+          style={{ borderRadius: '20px', boxShadow: 'var(--card-shadow)', border: '1px solid var(--card-border)' }}>
+          <DemoAnimation />
+        </div>
+
+        {/* CTAs */}
+        <div className="flex items-center gap-3">
+          <SignUpButton mode="modal">
+            <button className="text-sm font-bold px-8 py-3 rounded-xl text-white transition cursor-pointer"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 4px 20px rgba(99,102,241,0.4)' }}>
+              Get started free →
+            </button>
+          </SignUpButton>
+          <SignInButton mode="modal">
+            <button className="text-sm font-semibold px-6 py-3 rounded-xl transition cursor-pointer"
+              style={{ background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
+              Sign in
+            </button>
+          </SignInButton>
+        </div>
+
+        {/* Feature pills */}
+        <div className="mt-10 flex flex-wrap gap-2 justify-center">
+          {['Avios', 'Flying Blue', 'Aeroplan', 'Emirates Skywards', 'Virgin Points', 'Chase UR', 'Amex MR'].map((p) => (
+            <span key={p} className="text-xs text-white/30 px-3 py-1.5 rounded-full"
+              style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)' }}>
+              {p}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SearchPage() {
   const [query, setQuery] = useState('')
   const [pointsBalances, setPointsBalances] = useState<Record<string, number>>({})
   const navigate = useNavigate()
@@ -35,12 +99,11 @@ function HomePage() {
     if (!q.trim()) return
     const params: Record<string, string> = { q: q.trim() }
     if (Object.keys(pointsBalances).length > 0) params.points = JSON.stringify(pointsBalances)
-    navigate({ to: '/results', search: params })
+    navigate({ to: '/results', search: params as { q: string; points?: string } })
   }
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center px-4 py-16">
-
       <div className="relative w-full max-w-2xl">
         {/* Badge */}
         <div className="flex justify-center mb-10">
@@ -149,4 +212,18 @@ function HomePage() {
       </div>
     </div>
   )
+}
+
+function HomePage() {
+  const { isSignedIn, isLoaded } = useAuth()
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-indigo-500/40 border-t-indigo-400 animate-spin" />
+      </div>
+    )
+  }
+
+  return isSignedIn ? <SearchPage /> : <LandingPage />
 }
