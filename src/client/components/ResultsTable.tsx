@@ -663,6 +663,7 @@ interface Props {
 
 export function ResultsTable({ results, recommendations, filters, onFiltersChange }: Props) {
   const [page, setPage] = useState(0)
+  const [showFilters, setShowFilters] = useState(false)
 
   // Reset to page 0 whenever filters or sort changes
   useEffect(() => { setPage(0) }, [
@@ -724,333 +725,309 @@ export function ResultsTable({ results, recommendations, filters, onFiltersChang
 
   const hasFilters = filters.program || filters.airline || filters.cabin || filters.directOnly || filters.dateFrom || filters.dateTo
 
-  function SortTh({ label, k, className = '' }: { label: string; k: SortKey; className?: string }) {
-    const active = filters.sort === k
-    const arrow = active ? (filters.sortDir === 'asc' ? '↑' : '↓') : ''
-    return (
-      <th
-        className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none transition whitespace-nowrap ${active ? 'text-white' : 'text-white/25 hover:text-white/50'} ${className}`}
-        onClick={() => handleSortClick(k)}
-      >
-        {label}{active ? ` ${arrow}` : ''}
-      </th>
-    )
-  }
+  const activeFilterCount = [filters.program, filters.airline, filters.cabin, filters.directOnly || undefined, filters.dateFrom].filter(Boolean).length
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-        {programs.map((p) => {
-          const label = enriched.find((r) => r.source === p)?.programName ?? p
-          const active = filters.program === p
-          return (
-            <button key={p} onClick={() => update({ program: active ? null : p })}
-              className="text-xs px-3 py-1.5 rounded-lg border transition cursor-pointer font-semibold"
-              style={active
-                ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', borderColor: 'transparent' }
-                : { background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
-              {label}
-            </button>
-          )
-        })}
-
-        {airlines.length > 1 && <>
-          <div className="w-px h-4 bg-white/10" />
-          {airlines.map((a) => {
-            const active = filters.airline === a
+      {/* Top bar: sort + filter toggle + count */}
+      <div className="flex items-center gap-2">
+        {/* Sort */}
+        <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)' }}>
+          {(['pointsCost', 'taxesCashGbp', 'date'] as const).map((k) => {
+            const active = filters.sort === k
+            const label = k === 'pointsCost' ? 'Points' : k === 'taxesCashGbp' ? 'Taxes' : 'Date'
+            const arrow = active ? (filters.sortDir === 'asc' ? ' ↑' : ' ↓') : ''
             return (
-              <span key={a} className="relative group/chip">
-                <button onClick={() => update({ airline: active ? null : a })}
-                  className="text-xs px-2.5 py-1.5 rounded-lg font-mono transition cursor-pointer font-bold"
-                  style={active
-                    ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }
-                    : { background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
-                  {a}
-                </button>
-                {AIRLINE_NAMES[a] && (
-                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs bg-[var(--app-tooltip)] border border-white/10 text-white/80 rounded-lg whitespace-nowrap opacity-0 group-hover/chip:opacity-100 transition-opacity duration-150 z-20 shadow-lg">
-                    {AIRLINE_NAMES[a]}
-                  </span>
-                )}
-              </span>
-            )
-          })}
-        </>}
-
-        {cabins.length > 1 && <>
-          <div className="w-px h-4 bg-white/10" />
-          {cabins.map((c) => {
-            const active = filters.cabin === c
-            return (
-              <button key={c} onClick={() => update({ cabin: active ? null : c })}
-                className="text-xs px-2.5 py-1.5 rounded-lg transition cursor-pointer capitalize font-semibold"
+              <button key={k} onClick={() => handleSortClick(k)}
+                className="text-xs px-3 py-1.5 rounded-lg transition cursor-pointer font-semibold whitespace-nowrap"
                 style={active
-                  ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }
-                  : { background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
-                {c}
+                  ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)' }
+                  : { color: 'var(--filter-inactive-text)' }}>
+                {label}{arrow}
               </button>
             )
           })}
-        </>}
+        </div>
 
-        <div className="w-px h-4 bg-white/10" />
+        {/* Filter toggle */}
         <button
-          onClick={() => update({ directOnly: !filters.directOnly })}
-          className="text-xs px-2.5 py-1.5 rounded-lg transition cursor-pointer font-semibold"
-          style={filters.directOnly
+          onClick={() => setShowFilters((v) => !v)}
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl transition cursor-pointer"
+          style={showFilters || activeFilterCount > 0
             ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }
             : { background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
-          Direct only
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+          </svg>
+          Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
         </button>
-
-        {(filters.dateFrom || filters.dateTo) && (
-          <button onClick={() => update({ dateFrom: null, dateTo: null })}
-            className="text-xs px-2.5 py-1.5 rounded-lg transition cursor-pointer font-semibold"
-            style={{ background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }}>
-            {filters.dateFrom && filters.dateTo ? `${filters.dateFrom} – ${filters.dateTo}` : filters.dateFrom ?? filters.dateTo} ×
-          </button>
-        )}
 
         {hasFilters && (
           <button onClick={() => update({ program: null, airline: null, cabin: null, directOnly: false, dateFrom: null, dateTo: null })}
-            className="text-xs text-white/30 hover:text-white/60 transition cursor-pointer">
-            × clear filters
+            className="text-xs transition cursor-pointer"
+            style={{ color: 'var(--filter-inactive-text)' }}>
+            × clear
           </button>
         )}
-        <span className="ml-auto text-xs text-white/20">{filtered.length} of {results.length}</span>
+
+        <span className="ml-auto text-xs text-white/25">{filtered.length} of {results.length}</span>
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden" style={{ background: 'var(--card-bg)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--card-border)', borderRadius: '20px' }}>
+      {/* Collapsible filter panel */}
+      {showFilters && (
+        <div className="p-4 rounded-xl space-y-3" style={{ background: 'var(--filter-inactive-bg)', border: '1px solid var(--filter-inactive-border)' }}>
 
-        {/* Mobile card list */}
-        <div className="sm:hidden divide-y divide-white/5">
-          {paginated.length === 0 ? (
-            <div className="px-4 py-12 text-center text-white/20 text-sm">No results match the current filters.</div>
-          ) : paginated.map((r) => {
-            const rec = r.recommendation
-            const isExpanded = filters.expanded === r.id
-            const isHighlighted = filters.highlighted.includes(r.id)
-            return (
-              <Fragment key={r.id}>
-                <div
-                  onClick={() => update({ expanded: isExpanded ? null : r.id })}
-                  className={`px-4 py-3.5 cursor-pointer transition-colors ${isExpanded ? 'bg-white/[0.04]' : isHighlighted ? 'bg-indigo-500/5' : ''}`}
-                >
-                  <div className="flex items-start justify-between gap-3 mb-1.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {rec ? (
-                        <div className={`w-2 h-2 rounded-full shrink-0 mt-1 ${VERDICT_DOT[rec.verdict]}`} style={{ boxShadow: VERDICT_GLOW[rec.verdict] }} />
-                      ) : recommendations === undefined ? (
-                        <div className="w-2 h-2 rounded-full bg-white/20 animate-pulse shrink-0 mt-1" />
-                      ) : (
-                        <div className="w-2 h-2 rounded-full bg-white/10 shrink-0 mt-1" />
+          {/* Programs */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--filter-inactive-text)', opacity: 0.5 }}>Programs</p>
+            <div className="flex flex-wrap gap-1.5">
+              {programs.map((p) => {
+                const label = enriched.find((r) => r.source === p)?.programName ?? p
+                const active = filters.program === p
+                return (
+                  <button key={p} onClick={() => update({ program: active ? null : p })}
+                    className="text-xs px-3 py-1.5 rounded-lg transition cursor-pointer font-semibold"
+                    style={active
+                      ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }
+                      : { background: 'var(--card-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Airlines */}
+          {airlines.length > 1 && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--filter-inactive-text)', opacity: 0.5 }}>Airlines</p>
+              <div className="flex flex-wrap gap-1.5">
+                {airlines.map((a) => {
+                  const active = filters.airline === a
+                  return (
+                    <span key={a} className="relative group/chip">
+                      <button onClick={() => update({ airline: active ? null : a })}
+                        className="text-xs px-2.5 py-1.5 rounded-lg transition cursor-pointer font-semibold"
+                        style={active
+                          ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }
+                          : { background: 'var(--card-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
+                        {AIRLINE_NAMES[a] ?? a}
+                      </button>
+                      {AIRLINE_NAMES[a] && (
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs bg-[var(--app-tooltip)] border border-white/10 text-white/80 rounded-lg whitespace-nowrap opacity-0 group-hover/chip:opacity-100 transition-opacity duration-150 z-20 shadow-lg">
+                          {a}
+                        </span>
                       )}
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-white/80 truncate">{r.programName}</div>
-                        {rec && <div className={`text-xs ${VERDICT_TEXT[rec.verdict]}`}>{VERDICT_LABEL[rec.verdict]}</div>}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Cabin + Direct */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t" style={{ borderColor: 'var(--filter-inactive-border)' }}>
+            {cabins.length > 1 && cabins.map((c) => {
+              const active = filters.cabin === c
+              return (
+                <button key={c} onClick={() => update({ cabin: active ? null : c })}
+                  className="text-xs px-2.5 py-1.5 rounded-lg transition cursor-pointer capitalize font-semibold"
+                  style={active
+                    ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }
+                    : { background: 'var(--card-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
+                  {c}
+                </button>
+              )
+            })}
+            <button
+              onClick={() => update({ directOnly: !filters.directOnly })}
+              className="text-xs px-2.5 py-1.5 rounded-lg transition cursor-pointer font-semibold"
+              style={filters.directOnly
+                ? { background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }
+                : { background: 'var(--card-bg)', border: '1px solid var(--filter-inactive-border)', color: 'var(--filter-inactive-text)' }}>
+              Direct only
+            </button>
+            {(filters.dateFrom || filters.dateTo) && (
+              <button onClick={() => update({ dateFrom: null, dateTo: null })}
+                className="text-xs px-2.5 py-1.5 rounded-lg transition cursor-pointer font-semibold"
+                style={{ background: 'var(--filter-active-bg)', color: 'var(--filter-active-text)', border: '1px solid transparent' }}>
+                {filters.dateFrom && filters.dateTo ? `${filters.dateFrom} – ${filters.dateTo}` : filters.dateFrom ?? filters.dateTo} ×
+              </button>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* Cards */}
+      <div className="space-y-3">
+        {paginated.length === 0 ? (
+          <div className="py-12 text-center text-sm" style={{ color: 'var(--filter-inactive-text)' }}>No results match the current filters.</div>
+        ) : paginated.map((r) => {
+          const rec = r.recommendation
+          const isExpanded = filters.expanded === r.id
+          const isHighlighted = filters.highlighted.includes(r.id)
+
+          return (
+            <Fragment key={r.id}>
+              <div
+                className="overflow-hidden transition-all cursor-pointer"
+                style={{
+                  background: isHighlighted ? 'rgba(99,102,241,0.07)' : 'var(--card-bg)',
+                  boxShadow: isHighlighted ? '0 0 0 1px rgba(99,102,241,0.35), var(--card-shadow)' : 'var(--card-shadow)',
+                  border: `1px solid ${isHighlighted ? 'rgba(99,102,241,0.3)' : 'var(--card-border)'}`,
+                  borderRadius: '20px',
+                }}
+                onClick={() => update({ expanded: isExpanded ? null : r.id })}
+              >
+                <div className="flex">
+                  {/* Left — main info */}
+                  <div className="flex-1 min-w-0 p-5">
+
+                    {/* Program + verdict */}
+                    <div className="flex items-center gap-2 mb-4">
+                      {rec ? (
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${VERDICT_DOT[rec.verdict]}`}
+                          style={{ boxShadow: VERDICT_GLOW[rec.verdict] }} />
+                      ) : recommendations === undefined ? (
+                        <div className="w-2 h-2 rounded-full bg-white/20 animate-pulse shrink-0" />
+                      ) : (
+                        <div className="w-2 h-2 rounded-full bg-white/10 shrink-0" />
+                      )}
+                      <span className="text-sm font-bold text-white/80 truncate">{r.programName}</span>
+                      {rec && (
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                          rec.verdict === 'recommended' ? 'bg-emerald-400/10 text-emerald-400' :
+                          rec.verdict === 'consider' ? 'bg-amber-400/10 text-amber-400' :
+                          'bg-red-400/10 text-red-400'
+                        }`}>{VERDICT_LABEL[rec.verdict]}</span>
+                      )}
+                    </div>
+
+                    {/* Route visualisation */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="text-center shrink-0">
+                        <div className="text-2xl font-black font-mono text-white">{r.originAirport}</div>
+                      </div>
+                      <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                        <span className="text-xs text-white/30">{r.duration ?? ''}</span>
+                        <div className="w-full flex items-center gap-1">
+                          <div className="flex-1 border-t border-white/15" />
+                          {r.stops > 0 && <div className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />}
+                          <div className="flex-1 border-t border-white/15" />
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-white/30 shrink-0">
+                            <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                          </svg>
+                        </div>
+                        <span className={`text-xs font-semibold ${r.stops === 0 ? 'text-emerald-400/80' : 'text-rose-400/80'}`}>
+                          {r.stops === 0 ? 'Direct' : `${r.stops} stop`}
+                        </span>
+                      </div>
+                      <div className="text-center shrink-0">
+                        <div className="text-2xl font-black font-mono text-white">{r.destinationAirport}</div>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-base font-bold text-white tabular-nums">{r.pointsCost.toLocaleString()} <span className="text-xs font-normal text-white/30">pts</span></div>
-                      {r.taxesCashGbp != null && <div className="text-xs text-white/40">+£{r.taxesCashGbp} taxes</div>}
+
+                    {/* Meta row */}
+                    <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
+                      <span className="text-xs text-white/35">{r.date}</span>
+                      <span className="text-white/15">·</span>
+                      <span className="text-xs text-white/35 capitalize">{r.cabin}</span>
+                      {r.airlines.length > 0 && (
+                        <>
+                          <span className="text-white/15">·</span>
+                          <div className="flex gap-1">
+                            {r.airlines.map((a) => (
+                              <span key={a} className="relative group/airline">
+                                <span className="text-xs font-mono font-bold bg-white/8 text-white/40 px-1.5 py-0.5 rounded cursor-default">{a}</span>
+                                {AIRLINE_NAMES[a] && (
+                                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs bg-[var(--app-tooltip)] border border-white/10 text-white/80 rounded-lg whitespace-nowrap opacity-0 group-hover/airline:opacity-100 transition-opacity duration-150 z-20 shadow-lg">
+                                    {AIRLINE_NAMES[a]}
+                                  </span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      {r.remainingSeats != null && r.remainingSeats <= 4 && (
+                        <>
+                          <span className="text-white/15">·</span>
+                          <span className="text-xs font-semibold text-amber-400">{r.remainingSeats} seat{r.remainingSeats !== 1 ? 's' : ''} left</span>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-mono font-bold text-white">{r.originAirport} <span className="text-white/25">→</span> {r.destinationAirport}</span>
-                    <span className="text-white/20 text-xs">{isExpanded ? '▲' : '▼'}</span>
-                  </div>
-                  <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-1">
-                    <span className="text-xs text-white/30">{r.date}</span>
-                    <span className="text-white/15">·</span>
-                    <span className="text-xs text-white/25 capitalize">{r.cabin}</span>
-                    <span className="text-white/15">·</span>
-                    <span className={`text-xs font-medium ${r.stops === 0 ? 'text-emerald-400/70' : 'text-amber-400/70'}`}>
-                      {r.stops === 0 ? 'Direct' : `${r.stops}+ stop`}
-                    </span>
-                    {r.remainingSeats != null && r.remainingSeats <= 2 && (
-                      <span className="text-xs text-amber-400 ml-auto">{r.remainingSeats} left</span>
-                    )}
+
+                  {/* Divider */}
+                  <div className="w-px shrink-0" style={{ background: 'var(--card-border)' }} />
+
+                  {/* Right — price + CTA */}
+                  <div className="flex flex-col justify-between p-5 shrink-0 w-40 sm:w-48">
+                    <div>
+                      <div className="text-2xl font-black text-white tabular-nums leading-none">
+                        {r.pointsCost.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-white/35 mt-0.5">pts</div>
+                      {r.taxesCashGbp != null && (
+                        <div className="text-xs text-white/40 mt-1">+ £{r.taxesCashGbp} taxes</div>
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); update({ expanded: isExpanded ? null : r.id }) }}
+                      className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition cursor-pointer mt-4"
+                      style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' }}
+                    >
+                      {isExpanded ? 'Close ↑' : 'View →'}
+                    </button>
                   </div>
                 </div>
+
+                {/* Expanded details */}
                 {isExpanded && (
-                  <div className="bg-white/[0.03] border-t border-white/5 px-4 py-4">
+                  <div className="border-t px-6 py-5" style={{ borderColor: 'var(--card-border)', background: 'rgba(255,255,255,0.02)' }}>
                     <ExpandedRow result={r} rec={rec} />
                   </div>
                 )}
-              </Fragment>
-            )
-          })}
-        </div>
-
-        {/* Desktop table */}
-        <div className="hidden sm:block overflow-x-auto">
-          <table className="w-full border-collapse">
-            <colgroup>
-              <col className="w-8" />
-              <col className="w-48" />
-              <col className="w-32" />
-              <col className="w-28" />
-              <col className="w-24" />
-              <col className="w-20" />
-              <col className="w-28" />
-              <col className="w-16" />
-              <col className="w-8" />
-            </colgroup>
-            <thead>
-              <tr className="border-b border-white/5">
-                <th className="px-4 py-3 w-8" />
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-white/25">Program</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-white/25">Route</th>
-                <SortTh label="Date" k="date" />
-                <SortTh label="Points" k="pointsCost" className="text-right" />
-                <SortTh label="Taxes" k="taxesCashGbp" className="text-right" />
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-white/25">Airlines</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-white/25">Seats</th>
-                <th className="w-8" />
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-white/20 text-sm">No results match the current filters.</td>
-                </tr>
-              ) : paginated.map((r) => {
-                const rec = r.recommendation
-                const isExpanded = filters.expanded === r.id
-                const isHighlighted = filters.highlighted.includes(r.id)
-
-                return (
-                  <>
-                    <tr
-                      key={r.id}
-                      onClick={() => update({ expanded: isExpanded ? null : r.id })}
-                      className={`border-b border-white/5 last:border-0 cursor-pointer transition-colors ${isExpanded ? 'bg-white/[0.04]' : isHighlighted ? 'bg-indigo-500/5' : 'hover:bg-white/[0.02]'}`}
-                    >
-                      {/* Verdict dot */}
-                      <td className="px-4 py-4 w-8">
-                        <div className="flex justify-center">
-                          {rec ? (
-                            <div className={`w-2 h-2 rounded-full shrink-0 ${VERDICT_DOT[rec.verdict]}`}
-                              style={{ boxShadow: VERDICT_GLOW[rec.verdict] }} />
-                          ) : recommendations === undefined ? (
-                            <div className="w-2 h-2 rounded-full bg-white/20 animate-pulse" />
-                          ) : (
-                            <div className="w-2 h-2 rounded-full bg-white/10" />
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Program */}
-                      <td className="px-4 py-4">
-                        <div className="text-sm font-semibold text-white/80 truncate max-w-[180px]">{r.programName}</div>
-                        {rec && <div className={`text-xs font-medium mt-0.5 ${VERDICT_TEXT[rec.verdict]}`}>{VERDICT_LABEL[rec.verdict]}</div>}
-                      </td>
-
-                      {/* Route */}
-                      <td className="px-4 py-4">
-                        <div className="text-sm font-mono font-bold text-white whitespace-nowrap">
-                          {r.originAirport} <span className="text-white/25">→</span> {r.destinationAirport}
-                        </div>
-                      </td>
-
-                      {/* Date */}
-                      <td className="px-4 py-4">
-                        <div className="text-sm text-white/60 whitespace-nowrap">{r.date}</div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-xs text-white/25 capitalize">{r.cabin}</span>
-                          <span className="text-white/15">·</span>
-                          <span className={`text-xs font-medium ${r.stops === 0 ? 'text-emerald-400/70' : 'text-amber-400/70'}`}>
-                            {r.stops === 0 ? 'Direct' : `${r.stops}+ stop`}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Points */}
-                      <td className="px-4 py-4 text-right">
-                        <div className="text-sm font-bold text-white tabular-nums">{r.pointsCost.toLocaleString()}</div>
-                        <div className="text-xs text-white/25">pts</div>
-                      </td>
-
-                      {/* Taxes */}
-                      <td className="px-4 py-4 text-right">
-                        <div className="text-sm font-semibold text-white/60 tabular-nums">{r.taxesCashGbp != null ? `£${r.taxesCashGbp}` : '—'}</div>
-                      </td>
-
-                      {/* Airlines */}
-                      <td className="px-4 py-4">
-                        <div className="flex gap-1 flex-wrap">
-                          {r.airlines.map((a) => (
-                            <span key={a} className="relative group/airline">
-                              <span className="text-xs font-mono font-bold bg-white/8 text-white/50 px-1.5 py-0.5 rounded cursor-default">{a}</span>
-                              {AIRLINE_NAMES[a] && (
-                                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs bg-[var(--app-tooltip)] border border-white/10 text-white/80 rounded-lg whitespace-nowrap opacity-0 group-hover/airline:opacity-100 transition-opacity duration-150 z-20 shadow-lg">
-                                  {AIRLINE_NAMES[a]}
-                                </span>
-                              )}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-
-                      {/* Seats */}
-                      <td className="px-4 py-4 text-right">
-                        <span className={`text-sm font-semibold ${r.remainingSeats != null && r.remainingSeats <= 2 ? 'text-amber-400' : 'text-white/25'}`}>
-                          {r.remainingSeats ?? '—'}
-                        </span>
-                      </td>
-
-                      {/* Expand */}
-                      <td className="px-3 py-4 text-white/20 text-xs text-center">{isExpanded ? '▲' : '▼'}</td>
-                    </tr>
-
-                    {/* Expanded row */}
-                    {isExpanded && (
-                      <tr key={`${r.id}-expanded`} className="bg-white/[0.03] border-b border-white/5">
-                        <td colSpan={9} className="px-6 py-5">
-                          <ExpandedRow result={r} rec={rec} />
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-5 py-3 border-t border-white/5 flex items-center justify-between">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="text-xs text-white/30 hover:text-white/60 disabled:text-white/10 disabled:cursor-not-allowed transition cursor-pointer px-2 py-1"
-            >
-              ← Prev
-            </button>
-            <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPage(i)}
-                  className={`w-7 h-7 rounded-lg text-xs transition cursor-pointer ${i === page ? 'bg-indigo-500/20 text-indigo-300 font-semibold' : 'text-white/25 hover:text-white/50 hover:bg-white/5'}`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page === totalPages - 1}
-              className="text-xs text-white/30 hover:text-white/60 disabled:text-white/10 disabled:cursor-not-allowed transition cursor-pointer px-2 py-1"
-            >
-              Next →
-            </button>
-          </div>
-        )}
+              </div>
+            </Fragment>
+          )
+        })}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-1 py-2">
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="text-xs text-white/30 hover:text-white/60 disabled:text-white/10 disabled:cursor-not-allowed transition cursor-pointer px-3 py-2 rounded-lg"
+            style={{ background: 'var(--filter-inactive-bg)' }}
+          >
+            ← Prev
+          </button>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                onClick={() => setPage(i)}
+                className={`w-8 h-8 rounded-lg text-xs transition cursor-pointer font-semibold ${i === page ? 'text-white' : 'text-white/25 hover:text-white/50'}`}
+                style={i === page ? { background: 'var(--filter-active-bg)' } : { background: 'var(--filter-inactive-bg)' }}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page === totalPages - 1}
+            className="text-xs text-white/30 hover:text-white/60 disabled:text-white/10 disabled:cursor-not-allowed transition cursor-pointer px-3 py-2 rounded-lg"
+            style={{ background: 'var(--filter-inactive-bg)' }}
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   )
 }
