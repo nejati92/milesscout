@@ -5,6 +5,16 @@ import { useAuth } from '@clerk/clerk-react'
 import { trpc } from '../trpc'
 import { ResultsTable, DEFAULT_FILTERS, type TableFilters } from '../components/ResultsTable'
 import { AdvisorChat, type ChatMessage } from '../components/AdvisorChat'
+import type { SearchResponse, ReasonResponse } from '../../shared/types'
+
+type CacheEntry = {
+  searchData: SearchResponse
+  reasonData?: ReasonResponse
+  reasonInboundData?: ReasonResponse
+}
+
+// Persists across navigation within the same tab session
+const resultCache = new Map<string, CacheEntry>()
 
 const searchParamsSchema = z.object({
   q: z.string(),
@@ -21,18 +31,8 @@ function ResultsPage() {
   const { q, points } = Route.useSearch()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) navigate({ to: '/' })
-  }, [isLoaded, isSignedIn, navigate])
-
-  if (!isLoaded || !isSignedIn) {
-    return (
-      <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-indigo-500/40 border-t-indigo-400 animate-spin" />
-      </div>
-    )
-  }
   const pointsBalances = points ? (JSON.parse(points) as Record<string, number>) : undefined
+
   const search = trpc.search.search.useMutation()
   const reason = trpc.search.reason.useMutation()
   const reasonInbound = trpc.search.reason.useMutation()
@@ -54,30 +54,68 @@ function ResultsPage() {
   const [activeTab, setActiveTab] = useState<'outbound' | 'inbound'>('outbound')
   const [currentQuery, setCurrentQuery] = useState(q)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [, setSearchVersion] = useState(0)
 
   const isReturn = !!(searchData?.inboundResults)
 
   useEffect(() => {
-    if (q) {
-      lastReasonData.current = undefined
-      lastReasonInboundData.current = undefined
-      setActiveTab('outbound')
-      search.mutate({ text: q, pointsBalances }, {
-        onSuccess(result) {
-          if (result.rawResults.length > 0) {
-            reason.mutate({ parsed: result.parsed, rawResults: result.rawResults, pointsBalances })
-          }
-          if (result.inboundResults && result.inboundResults.length > 0) {
-            reasonInbound.mutate({ parsed: result.parsed, rawResults: result.inboundResults, pointsBalances })
-          }
-        },
-      })
-      setCurrentQuery(q)
-      setTableFilters(DEFAULT_FILTERS)
-      setInboundFilters(DEFAULT_FILTERS)
+    if (isLoaded && !isSignedIn) navigate({ to: '/' })
+  }, [isLoaded, isSignedIn, navigate])
+
+  useEffect(() => {
+    if (!q) return
+
+    const cacheKey = `${q}::${points ?? ''}`
+    const cached = resultCache.get(cacheKey)
+
+    setActiveTab('outbound')
+    setCurrentQuery(q)
+    setTableFilters(DEFAULT_FILTERS)
+    setInboundFilters(DEFAULT_FILTERS)
+    setChatMessages([])
+
+    if (cached) {
+      lastSearchData.current = cached.searchData
+      lastReasonData.current = cached.reasonData
+      lastReasonInboundData.current = cached.reasonInboundData
+      setSearchVersion((v) => v + 1)
+      return
     }
+
+    lastSearchData.current = undefined
+    lastReasonData.current = undefined
+    lastReasonInboundData.current = undefined
+    setSearchVersion((v) => v + 1)
+
+    search.mutate({ text: q, pointsBalances }, {
+      onSuccess(result) {
+        resultCache.set(cacheKey, { searchData: result })
+        if (result.rawResults.length > 0) {
+          reason.mutate({ parsed: result.parsed, rawResults: result.rawResults, pointsBalances }, {
+            onSuccess(reasonResult) {
+              resultCache.set(cacheKey, { ...resultCache.get(cacheKey)!, reasonData: reasonResult })
+            },
+          })
+        }
+        if (result.inboundResults && result.inboundResults.length > 0) {
+          reasonInbound.mutate({ parsed: result.parsed, rawResults: result.inboundResults, pointsBalances }, {
+            onSuccess(reasonInboundResult) {
+              resultCache.set(cacheKey, { ...resultCache.get(cacheKey)!, reasonInboundData: reasonInboundResult })
+            },
+          })
+        }
+      },
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, points])
+
+  if (!isLoaded || !isSignedIn) {
+    return (
+      <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-indigo-500/40 border-t-indigo-400 animate-spin" />
+      </div>
+    )
+  }
 
   function handleNewSearch(newQuery: string) {
     setTableFilters(DEFAULT_FILTERS)
@@ -86,7 +124,7 @@ function ResultsPage() {
     navigate({ to: '/results', search: { q: newQuery, ...(points ? { points } : {}) } })
   }
 
-  const isFirstLoad = search.isPending && !searchData
+  const isFirstLoad = search.isPending && !searchData && !lastSearchData.current
   const isReasoning = !search.isPending && !!searchData && (reason.isPending || (isReturn && reasonInbound.isPending))
 
   const activeResults = activeTab === 'inbound' ? (searchData?.inboundResults ?? []) : (searchData?.rawResults ?? [])
@@ -248,13 +286,26 @@ function ResultsPage() {
               </div>
             )}
 
-            {activeResults.length > 0 && activeReasonData?.advice && (
+            {activeResults.length > 0 && !search.isPending && (
               <div className="p-5" style={{ background: 'var(--card-bg)', boxShadow: 'var(--card-shadow)', border: '1px solid var(--card-border)', borderRadius: '20px' }}>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-lime-400" style={{ boxShadow: '0 0 6px rgba(163,230,53,0.8)' }} />
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={activeReasonData?.advice
+                      ? { background: '#a3e635', boxShadow: '0 0 6px rgba(163,230,53,0.8)' }
+                      : { background: 'rgba(255,255,255,0.15)' }}
+                  />
                   <p className="text-xs font-bold text-lime-400 uppercase tracking-wider">AI Analysis</p>
                 </div>
-                <p className="text-sm text-white/60 leading-relaxed">{activeReasonData.advice}</p>
+                {activeReasonData?.advice ? (
+                  <p className="text-sm text-white/60 leading-relaxed">{activeReasonData.advice}</p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="h-3 rounded-full animate-pulse w-full" style={{ background: 'var(--filter-inactive-bg)' }} />
+                    <div className="h-3 rounded-full animate-pulse w-4/5" style={{ background: 'var(--filter-inactive-bg)' }} />
+                    <div className="h-3 rounded-full animate-pulse w-3/5" style={{ background: 'var(--filter-inactive-bg)' }} />
+                  </div>
+                )}
               </div>
             )}
 

@@ -75,9 +75,56 @@ export const ReasonResponse = z.object({
   advice: z.string(),
 })
 
+export const TripSegment = z.object({
+  ID: z.string().optional(),
+  OriginAirport: z.string(),
+  DestinationAirport: z.string(),
+  DepartsAt: z.string(),
+  ArrivesAt: z.string(),
+  FlightNumber: z.string(),
+  Duration: z.number(),
+  AircraftName: z.string(),
+  Cabin: z.string(),
+  FareClass: z.string(),
+  Order: z.number(),
+})
+
+export const Trip = z.object({
+  ID: z.string(),
+  AvailabilityID: z.string(),
+  AvailabilitySegments: z.array(TripSegment),
+  TotalDuration: z.number(),
+  Stops: z.number(),
+  FlightNumbers: z.string(),
+  DepartsAt: z.string(),
+  ArrivesAt: z.string(),
+  MileageCost: z.number(),
+  TotalTaxes: z.number(),
+  TaxesCurrency: z.string(),
+  RemainingSeats: z.number(),
+  Source: z.string(),
+  Cabin: z.string(),
+})
+
+export const BookingLink = z.object({
+  label: z.string(),
+  link: z.string(),
+  primary: z.boolean(),
+})
+
+export const TripDetailsResponse = z.object({
+  trips: z.array(Trip),
+  relevant: BookingLink.nullable(),
+  others: z.array(BookingLink),
+})
+
 export type RawQuery = z.infer<typeof RawQuery>
 export type ParsedQuery = z.infer<typeof ParsedQuery>
 export type AvailabilityResult = z.infer<typeof AvailabilityResult>
 export type Recommendation = z.infer<typeof Recommendation>
 export type SearchResponse = z.infer<typeof SearchResponse>
 export type ReasonResponse = z.infer<typeof ReasonResponse>
+export type TripSegment = z.infer<typeof TripSegment>
+export type Trip = z.infer<typeof Trip>
+export type BookingLink = z.infer<typeof BookingLink>
+export type TripDetailsResponse = z.infer<typeof TripDetailsResponse>
